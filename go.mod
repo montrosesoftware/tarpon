@@ -1,4 +1,4 @@
-module github.com/montrosesoftware/face-poker-messaging
+module github.com/montrosesoftware/tarpon
 
 go 1.14
 

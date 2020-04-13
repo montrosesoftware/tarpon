@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/montrosesoftware/face-poker-messaging/pkg/messaging"
+	"github.com/montrosesoftware/tarpon/pkg/messaging"
 )
 
 func TestEncoding(t *testing.T) {
@@ -18,11 +18,11 @@ func TestEncoding(t *testing.T) {
 		t.Errorf("decoding failed: %v", err)
 	}
 	if !reflect.DeepEqual(m, msg) {
-		t.Errorf("expected msg %v but got %v", m, msg)
+		t.Errorf("got %v but expceted %v", msg, m)
 	}
 
 	_, err = messaging.Decode([]byte("msg"))
 	if err == nil {
-		t.Error("expected error but got nil")
+		t.Error("got nil but expected error")
 	}
 }

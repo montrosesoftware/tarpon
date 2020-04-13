@@ -1,2 +1,2 @@
-# face-poker-messaging
-Golang Messaging Server using NATS, Redis and WebSockets.
+# Tarpon
+Golang secure and fast messaging server using NATS, Redis and WebSockets.
