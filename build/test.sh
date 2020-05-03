@@ -17,7 +17,5 @@ for d in $(go list ./...); do
     go fmt "$d"
 done
 
-echo "Checking go vet:"
-for d in $(go list ./...); do
-    go vet "$d"
-done
+echo "Checking lint:"
+golangci-lint run
