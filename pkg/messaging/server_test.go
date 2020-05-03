@@ -19,17 +19,18 @@ func (s *SpyRoomStore) CreateRoom(uid string) {
 
 func TestCreateRoom(t *testing.T) {
 	t.Run("creates empty room with given id", func(t *testing.T) {
-		room := "123"
-		store := SpyRoomStore{}
-		server := messaging.RoomServer{&store}
+		room := "abc-123"
+		store := &SpyRoomStore{}
+		server := messaging.NewRoomServer(store)
 		request, _ := http.NewRequest(http.MethodPost, "/rooms/"+room, nil)
 		response := httptest.NewRecorder()
 
 		server.ServeHTTP(response, request)
 
 		assert.Equal(t, http.StatusOK, response.Result().StatusCode, "should return status success")
-		assert.Equal(t, 1, len(store.rooms), "should create single room")
-		assert.Equal(t, room, store.rooms[0], "room id should match")
+		if assert.Equal(t, 1, len(store.rooms), "should create single room") {
+			assert.Equal(t, room, store.rooms[0], "room id should match")
+		}
 	})
 
 }
