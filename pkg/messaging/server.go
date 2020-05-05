@@ -2,13 +2,14 @@ package messaging
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
 )
 
 type RoomStore interface {
-	CreateRoom(uid string)
+	CreateRoom(uid string) bool
 }
 
 type RoomServer struct {
@@ -42,5 +43,17 @@ func (s *RoomServer) CreateRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.store.CreateRoom(req.UID)
+	created := s.store.CreateRoom(req.UID)
+	if created {
+		w.WriteHeader(http.StatusCreated)
+		logger(w.Write([]byte("Created")))
+	} else {
+		http.Error(w, "uid: already exists", http.StatusConflict)
+	}
+}
+
+func logger(n int, err error) {
+	if err != nil {
+		log.Printf("Response write failed: %v", err)
+	}
 }
