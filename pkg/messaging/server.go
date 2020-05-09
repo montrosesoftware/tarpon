@@ -94,6 +94,10 @@ func (s *RoomServer) RegisterPeer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !checkLength(w, req.Secret, 100, "secret") {
+		return
+	}
+
 	p := Peer(req)
 	if s.store.RegisterPeer(room, p) {
 		w.WriteHeader(http.StatusCreated)
@@ -112,7 +116,7 @@ func logger(n int, err error) {
 
 func checkLength(w http.ResponseWriter, val string, limit int, name string) bool {
 	if len(val) < 1 || len(val) > limit {
-		http.Error(w, fmt.Sprint(name, ": must be between 1 and ,", limit, " characters"), http.StatusBadRequest)
+		http.Error(w, fmt.Sprint(name, ": must be between 1 and ", limit, " characters"), http.StatusBadRequest)
 		return false
 	}
 	return true

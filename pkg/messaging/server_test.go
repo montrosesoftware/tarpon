@@ -6,13 +6,16 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/montrosesoftware/tarpon/pkg/messaging"
 )
 
-const (
-	tooLongUID = "0123456789-0123456789-0123456789-0123456789"
+var (
+	tooLongUID    = "0123456789-0123456789-0123456789-0123456789"
+	tooLongSecret = strings.Repeat("a", 101)
+	myRoomUID     = "room-123"
 )
 
 type SpyRoomStore struct {
@@ -31,7 +34,7 @@ func (s *SpyRoomStore) CreateRoom(uid string) bool {
 }
 
 func (s *SpyRoomStore) RegisterPeer(room string, peer messaging.Peer) bool {
-	if room != "room-123" {
+	if room != myRoomUID {
 		s.t.Errorf("unexpected room %q passed to register peer", room)
 		return false
 	}
@@ -50,7 +53,7 @@ func TestCreateRoom(t *testing.T) {
 		wantMessage string
 	}{
 		"creates empty room with given id": {
-			uid:         "123-abc",
+			uid:         myRoomUID,
 			wantStatus:  201,
 			wantRoom:    true,
 			wantMessage: "Created\n",
@@ -90,26 +93,43 @@ func TestCreateRoom(t *testing.T) {
 func TestRegisterPeer(t *testing.T) {
 	cases := map[string]struct {
 		peer        *messaging.Peer
+		room        string
 		wantStatus  int
 		wantPeer    bool
 		wantMessage string
 	}{
 		"creates given peer": {
 			peer:        &messaging.Peer{UID: "peer-abc", Secret: "secret"},
+			room:        myRoomUID,
 			wantStatus:  201,
 			wantPeer:    true,
 			wantMessage: "Created\n",
 		},
+		"returns error when room UID too long": {
+			peer:       &messaging.Peer{UID: "peer-abc", Secret: "secret"},
+			room:       tooLongUID,
+			wantStatus: 400,
+			wantPeer:   false,
+		},
 		"returns error when peer UID too long": {
 			peer:       &messaging.Peer{UID: tooLongUID, Secret: "secret"},
+			room:       myRoomUID,
+			wantStatus: 400,
+			wantPeer:   false,
+		},
+		"returns error when peer secret too long": {
+			peer:       &messaging.Peer{UID: "peer-abc", Secret: tooLongSecret},
+			room:       myRoomUID,
 			wantStatus: 400,
 			wantPeer:   false,
 		}, "returns error when invalid request": {
 			peer:       nil,
+			room:       myRoomUID,
 			wantStatus: 400,
 			wantPeer:   false,
 		}, "returns 200 when already registered": {
 			peer:        &messaging.Peer{UID: "duplicate", Secret: "secret"},
+			room:        myRoomUID,
 			wantStatus:  200,
 			wantPeer:    false,
 			wantMessage: "OK\n",
@@ -120,7 +140,7 @@ func TestRegisterPeer(t *testing.T) {
 			store := &SpyRoomStore{t: t}
 			server := messaging.NewRoomServer(store)
 
-			request := newRegisterPeerRequest(t, tt.peer)
+			request := newRegisterPeerRequest(t, tt.room, tt.peer)
 			response := httptest.NewRecorder()
 
 			server.ServeHTTP(response, request)
@@ -188,7 +208,7 @@ func newCreateRoomRequest(t *testing.T, uid string) *http.Request {
 	return req
 }
 
-func newRegisterPeerRequest(t *testing.T, peer *messaging.Peer) *http.Request {
+func newRegisterPeerRequest(t *testing.T, room string, peer *messaging.Peer) *http.Request {
 	t.Helper()
 	var body io.Reader
 	if peer == nil {
@@ -201,7 +221,7 @@ func newRegisterPeerRequest(t *testing.T, peer *messaging.Peer) *http.Request {
 		}
 		body = bytes.NewBuffer(b)
 	}
-	req, err := http.NewRequest("POST", "/rooms/room-123/peers", body)
+	req, err := http.NewRequest("POST", "/rooms/"+room+"/peers", body)
 	if err != nil {
 		t.Fatalf("could not instantiate register peer request: %v", err)
 	}
