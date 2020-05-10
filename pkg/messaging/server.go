@@ -54,7 +54,7 @@ func (s *RoomServer) CreateRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !checkLength(w, req.UID, 40, "uid") {
+	if !checkLength(w, req.UID, 1, 40, "uid") {
 		return
 	}
 
@@ -75,7 +75,7 @@ type RegisterPeerReq struct {
 func (s *RoomServer) RegisterPeer(w http.ResponseWriter, r *http.Request) {
 	room, tail := msv.ShiftPathN(r.URL.Path, 2)
 
-	if !checkLength(w, room, 40, "room uid") {
+	if !checkLength(w, room, 1, 40, "room uid") {
 		return
 	}
 
@@ -90,11 +90,11 @@ func (s *RoomServer) RegisterPeer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !checkLength(w, req.UID, 40, "uid") {
+	if !checkLength(w, req.UID, 1, 40, "uid") {
 		return
 	}
 
-	if !checkLength(w, req.Secret, 100, "secret") {
+	if !checkLength(w, req.Secret, 24, 100, "secret") {
 		return
 	}
 
@@ -114,9 +114,9 @@ func logger(n int, err error) {
 	}
 }
 
-func checkLength(w http.ResponseWriter, val string, limit int, name string) bool {
-	if len(val) < 1 || len(val) > limit {
-		http.Error(w, fmt.Sprint(name, ": must be between 1 and ", limit, " characters"), http.StatusBadRequest)
+func checkLength(w http.ResponseWriter, val string, lower int, upper int, name string) bool {
+	if len(val) < lower || len(val) > upper {
+		http.Error(w, fmt.Sprint(name, ": must be between ", lower, " and ", upper, " characters"), http.StatusBadRequest)
 		return false
 	}
 	return true

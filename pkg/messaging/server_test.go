@@ -16,6 +16,7 @@ var (
 	tooLongUID    = "0123456789-0123456789-0123456789-0123456789"
 	tooLongSecret = strings.Repeat("a", 101)
 	myRoomUID     = "room-123"
+	mySecret      = "0123456789-0123456789-0123456789"
 )
 
 type SpyRoomStore struct {
@@ -99,20 +100,20 @@ func TestRegisterPeer(t *testing.T) {
 		wantMessage string
 	}{
 		"creates given peer": {
-			peer:        &messaging.Peer{UID: "peer-abc", Secret: "secret"},
+			peer:        &messaging.Peer{UID: "peer-abc", Secret: mySecret},
 			room:        myRoomUID,
 			wantStatus:  201,
 			wantPeer:    true,
 			wantMessage: "Created\n",
 		},
 		"returns error when room UID too long": {
-			peer:       &messaging.Peer{UID: "peer-abc", Secret: "secret"},
+			peer:       &messaging.Peer{UID: "peer-abc", Secret: mySecret},
 			room:       tooLongUID,
 			wantStatus: 400,
 			wantPeer:   false,
 		},
 		"returns error when peer UID too long": {
-			peer:       &messaging.Peer{UID: tooLongUID, Secret: "secret"},
+			peer:       &messaging.Peer{UID: tooLongUID, Secret: mySecret},
 			room:       myRoomUID,
 			wantStatus: 400,
 			wantPeer:   false,
@@ -128,7 +129,7 @@ func TestRegisterPeer(t *testing.T) {
 			wantStatus: 400,
 			wantPeer:   false,
 		}, "returns 200 when already registered": {
-			peer:        &messaging.Peer{UID: "duplicate", Secret: "secret"},
+			peer:        &messaging.Peer{UID: "duplicate", Secret: mySecret},
 			room:        myRoomUID,
 			wantStatus:  200,
 			wantPeer:    false,
