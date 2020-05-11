@@ -46,7 +46,7 @@ func (s *SpyRoomStore) RegisterPeer(room string, peer messaging.Peer) bool {
 	return true
 }
 
-func TestCreateRoom(t *testing.T) {
+func TestCreateRoomRequest(t *testing.T) {
 	cases := map[string]struct {
 		uid         string
 		wantStatus  int
@@ -91,7 +91,7 @@ func TestCreateRoom(t *testing.T) {
 		})
 	}
 }
-func TestRegisterPeer(t *testing.T) {
+func TestRegisterPeerRequest(t *testing.T) {
 	cases := map[string]struct {
 		peer        *messaging.Peer
 		room        string
