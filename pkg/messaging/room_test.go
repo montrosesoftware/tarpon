@@ -7,7 +7,7 @@ import (
 )
 
 func TestRegisterNewPeer(t *testing.T) {
-	room := messaging.Room{}
+	room := &messaging.Room{}
 	peer := messaging.Peer{UID: "peer-123", Secret: "secret"}
 
 	assertNoPeer(t, room, peer)
@@ -20,7 +20,7 @@ func TestRegisterNewPeer(t *testing.T) {
 }
 
 func TestUpdateAlreadyRegisteredPeer(t *testing.T) {
-	room := messaging.Room{}
+	room := &messaging.Room{}
 	peer := messaging.Peer{UID: "peer-123", Secret: "secret"}
 	room.RegisterPeer(peer)
 
@@ -34,7 +34,21 @@ func TestUpdateAlreadyRegisteredPeer(t *testing.T) {
 	assertPeer(t, room, peer)
 }
 
-func assertNoPeer(t *testing.T, r messaging.Room, p messaging.Peer) {
+func TestRegisterConcurrently(t *testing.T) {
+	room := &messaging.Room{}
+	for i := 0; i < 2; i++ {
+		go func() {
+			p := messaging.Peer{UID: "same"}
+			room.RegisterPeer(p)
+			c := room.PeersCount()
+			if c != 1 {
+				t.Errorf("got %d peers, but want 1", c)
+			}
+		}()
+	}
+}
+
+func assertNoPeer(t *testing.T, r *messaging.Room, p messaging.Peer) {
 	t.Helper()
 	if _, ok := r.GetPeer(p.UID); ok {
 		t.Errorf("peer already exists %+v", p)
@@ -44,7 +58,7 @@ func assertNoPeer(t *testing.T, r messaging.Room, p messaging.Peer) {
 	}
 }
 
-func assertPeer(t *testing.T, r messaging.Room, want messaging.Peer) {
+func assertPeer(t *testing.T, r *messaging.Room, want messaging.Peer) {
 	t.Helper()
 	p, ok := r.GetPeer(want.UID)
 	if !ok {

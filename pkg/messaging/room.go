@@ -1,10 +1,16 @@
 package messaging
 
+import "sync"
+
 type Room struct {
 	peers []Peer
+	mutex sync.RWMutex
 }
 
 func (r *Room) RegisterPeer(peer Peer) bool {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
 	for i, p := range r.peers {
 		if p.UID == peer.UID {
 			r.peers[i] = peer
@@ -16,6 +22,9 @@ func (r *Room) RegisterPeer(peer Peer) bool {
 }
 
 func (r *Room) GetPeer(uid string) (Peer, bool) {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+
 	for _, p := range r.peers {
 		if p.UID == uid {
 			return p, true
@@ -25,5 +34,8 @@ func (r *Room) GetPeer(uid string) (Peer, bool) {
 }
 
 func (r *Room) PeersCount() int {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+
 	return len(r.peers)
 }
