@@ -1,4 +1,4 @@
-package messaging_test
+package server_test
 
 import (
 	"bytes"
@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/montrosesoftware/tarpon/pkg/messaging"
+	"github.com/montrosesoftware/tarpon/pkg/server"
 )
 
 var (
@@ -76,7 +77,7 @@ func TestCreateRoomRequest(t *testing.T) {
 	for name, tt := range cases {
 		t.Run(name, func(t *testing.T) {
 			store := &SpyRoomStore{}
-			server := messaging.NewRoomServer(store)
+			server := server.NewRoomServer(store)
 
 			request := newCreateRoomRequest(t, tt.uid)
 			response := httptest.NewRecorder()
@@ -139,7 +140,7 @@ func TestRegisterPeerRequest(t *testing.T) {
 	for name, tt := range cases {
 		t.Run(name, func(t *testing.T) {
 			store := &SpyRoomStore{t: t}
-			server := messaging.NewRoomServer(store)
+			server := server.NewRoomServer(store)
 
 			request := newRegisterPeerRequest(t, tt.room, tt.peer)
 			response := httptest.NewRecorder()
@@ -171,7 +172,7 @@ func TestInvalidRequests(t *testing.T) {
 	for _, tt := range cases {
 		t.Run("check "+tt.url, func(t *testing.T) {
 			store := &SpyRoomStore{}
-			server := messaging.NewRoomServer(store)
+			server := server.NewRoomServer(store)
 			req, err := http.NewRequest(tt.method, tt.url, nil)
 			if err != nil {
 				t.Fatalf("could not instantiate request: %v", err)
@@ -195,7 +196,7 @@ func newCreateRoomRequest(t *testing.T, uid string) *http.Request {
 	if uid == "" {
 		body = bytes.NewBuffer([]byte{0})
 	} else {
-		req := messaging.CreateRoomReq{UID: uid}
+		req := server.CreateRoomReq{UID: uid}
 		b, err := json.Marshal(req)
 		if err != nil {
 			t.Fatalf("could not marshal create room request body: %v", err)
@@ -215,7 +216,7 @@ func newRegisterPeerRequest(t *testing.T, room string, peer *messaging.Peer) *ht
 	if peer == nil {
 		body = bytes.NewBuffer([]byte{0})
 	} else {
-		req := messaging.RegisterPeerReq(*peer)
+		req := server.RegisterPeerReq(*peer)
 		b, err := json.Marshal(req)
 		if err != nil {
 			t.Fatalf("could not marshal register peer request body: %v", err)

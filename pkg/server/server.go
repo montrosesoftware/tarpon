@@ -1,4 +1,4 @@
-package messaging
+package server
 
 import (
 	"encoding/json"
@@ -6,12 +6,13 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/montrosesoftware/tarpon/pkg/messaging"
 	"github.com/montrosesoftware/tarpon/pkg/msv"
 )
 
 type RoomStore interface {
 	CreateRoom(uid string) bool
-	RegisterPeer(room string, peer Peer) bool
+	RegisterPeer(room string, peer messaging.Peer) bool
 }
 
 type RoomServer struct {
@@ -98,7 +99,7 @@ func (s *RoomServer) RegisterPeer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	p := Peer(req)
+	p := messaging.Peer(req)
 	if s.store.RegisterPeer(room, p) {
 		w.WriteHeader(http.StatusCreated)
 		logger(w.Write([]byte("Created\n")))
