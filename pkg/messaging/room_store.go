@@ -1,6 +1,14 @@
 package messaging
 
-import "sync"
+import (
+	"errors"
+	"sync"
+)
+
+var (
+	ErrRoomNotFound = errors.New("room not found")
+	ErrUnauthorized = errors.New("not authorized")
+)
 
 type MemoryRoomStore struct {
 	rooms map[string]*Room
@@ -40,6 +48,10 @@ func (s *MemoryRoomStore) RegisterPeer(room string, p Peer) bool {
 	r := s.rooms[room]
 	s.mutex.Unlock()
 	return r.RegisterPeer(p)
+}
+
+func (s *MemoryRoomStore) JoinRoom(room string, secret string) (Peer, error) {
+	panic("Not implemented")
 }
 
 // ensureRoom assumes a lock is held

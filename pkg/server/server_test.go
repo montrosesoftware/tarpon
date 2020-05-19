@@ -18,9 +18,11 @@ var (
 	tooLongSecret = strings.Repeat("a", 101)
 	myRoomUID     = "room-123"
 	mySecret      = "0123456789-0123456789-0123456789"
+	myPeer        = "peer-abc"
 )
 
 type SpyRoomStore struct {
+	server.RoomStore
 	rooms []string
 	peers []messaging.Peer
 	t     *testing.T
@@ -101,14 +103,14 @@ func TestRegisterPeerRequest(t *testing.T) {
 		wantMessage string
 	}{
 		"creates given peer": {
-			peer:        &messaging.Peer{UID: "peer-abc", Secret: mySecret},
+			peer:        &messaging.Peer{UID: myPeer, Secret: mySecret},
 			room:        myRoomUID,
 			wantStatus:  201,
 			wantPeer:    true,
 			wantMessage: "Created\n",
 		},
 		"returns error when room UID too long": {
-			peer:       &messaging.Peer{UID: "peer-abc", Secret: mySecret},
+			peer:       &messaging.Peer{UID: myPeer, Secret: mySecret},
 			room:       tooLongUID,
 			wantStatus: 400,
 			wantPeer:   false,
@@ -120,7 +122,7 @@ func TestRegisterPeerRequest(t *testing.T) {
 			wantPeer:   false,
 		},
 		"returns error when peer secret too long": {
-			peer:       &messaging.Peer{UID: "peer-abc", Secret: tooLongSecret},
+			peer:       &messaging.Peer{UID: myPeer, Secret: tooLongSecret},
 			room:       myRoomUID,
 			wantStatus: 400,
 			wantPeer:   false,
@@ -168,6 +170,8 @@ func TestInvalidRequests(t *testing.T) {
 		{"/rooms/abc/test", "POST", 404},
 		{"/rooms/abc/peers", "GET", 405},
 		{"/rooms/abc/peers/abc", "POST", 404},
+		{"/rooms/abc/ws", "POST", 405},
+		{"/rooms/abc/ws/aaa", "GET", 404},
 	}
 	for _, tt := range cases {
 		t.Run("check "+tt.url, func(t *testing.T) {
@@ -230,13 +234,6 @@ func newRegisterPeerRequest(t *testing.T, room string, peer *messaging.Peer) *ht
 	return req
 }
 
-func assertStatus(t *testing.T, got *httptest.ResponseRecorder, want int) {
-	t.Helper()
-	if got.Code != want {
-		t.Errorf("did not get correct status, got %d, want %d", got.Code, want)
-	}
-}
-
 func assertRoomCreated(t *testing.T, got *SpyRoomStore, wantRoom bool, uid string) {
 	t.Helper()
 	if !wantRoom {
@@ -270,6 +267,13 @@ func assertPeerRegistered(t *testing.T, got *SpyRoomStore, wantPeer bool, peer *
 		}
 	} else {
 		t.Errorf("did not register correct number of peers, got %d, want 1", len(got.peers))
+	}
+}
+
+func assertStatus(t *testing.T, got *httptest.ResponseRecorder, want int) {
+	t.Helper()
+	if got.Code != want {
+		t.Errorf("did not get correct status, got %d, want %d", got.Code, want)
 	}
 }
 
