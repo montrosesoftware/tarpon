@@ -9,6 +9,7 @@ import (
 )
 
 var myRoom = "room-123"
+var myPeer = messaging.Peer{UID: "123-123", Secret: "secret"}
 
 func TestCreateEmptyRoom(t *testing.T) {
 	store := messaging.NewRoomStore()
@@ -75,6 +76,48 @@ func TestRegisterPeerConcurrently(t *testing.T) {
 				t.Errorf("got %d rooms, but want 1", r)
 			}
 		}(strconv.Itoa(i))
+	}
+}
+
+func TestJoinRoom(t *testing.T) {
+	cases := map[string]struct {
+		room   string
+		secret string
+		err    error
+		peer   messaging.Peer
+	}{
+		"return peer when success": {
+			room:   myRoom,
+			secret: myPeer.Secret,
+			peer:   myPeer,
+		},
+		"return error when invalid room": {
+			room: "invalid",
+			err:  messaging.ErrRoomNotFound,
+			peer: messaging.Peer{},
+		},
+		"return error when invalid secret": {
+			room:   myRoom,
+			secret: "invalid",
+			err:    messaging.ErrUnauthorized,
+			peer:   messaging.Peer{},
+		},
+	}
+
+	store := messaging.NewRoomStore()
+	store.CreateRoom(myRoom)
+	store.RegisterPeer(myRoom, myPeer)
+
+	for name, tt := range cases {
+		t.Run(name, func(t *testing.T) {
+			peer, err := store.JoinRoom(tt.room, tt.secret)
+			if peer != tt.peer {
+				t.Errorf("got peer %+v, want %+v", peer, tt.peer)
+			}
+			if err != tt.err {
+				t.Errorf("got err %+v, want %+v", err, tt.err)
+			}
+		})
 	}
 }
 

@@ -51,7 +51,13 @@ func (s *MemoryRoomStore) RegisterPeer(room string, p Peer) bool {
 }
 
 func (s *MemoryRoomStore) JoinRoom(room string, secret string) (Peer, error) {
-	panic("Not implemented")
+	s.mutex.RLock()
+	r := s.rooms[room]
+	s.mutex.RUnlock()
+	if r == nil {
+		return Peer{}, ErrRoomNotFound
+	}
+	return r.Join(secret)
 }
 
 // ensureRoom assumes a lock is held

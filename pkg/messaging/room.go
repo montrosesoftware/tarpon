@@ -1,6 +1,8 @@
 package messaging
 
-import "sync"
+import (
+	"sync"
+)
 
 type Room struct {
 	peers []Peer
@@ -38,4 +40,16 @@ func (r *Room) PeersCount() int {
 	defer r.mutex.RUnlock()
 
 	return len(r.peers)
+}
+
+func (r *Room) Join(secret string) (Peer, error) {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+
+	for _, p := range r.peers {
+		if p.Secret == secret {
+			return p, nil
+		}
+	}
+	return Peer{}, ErrUnauthorized
 }
