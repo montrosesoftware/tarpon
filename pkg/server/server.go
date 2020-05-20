@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/websocket"
 	"github.com/montrosesoftware/tarpon/pkg/messaging"
@@ -130,7 +131,9 @@ func (s *RoomServer) JoinRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := s.store.JoinRoom(room, ""); err != nil {
+	secret := getSecret(r)
+
+	if _, err := s.store.JoinRoom(room, secret); err != nil {
 		switch err {
 		case messaging.ErrRoomNotFound:
 			http.Error(w, "Room not found", http.StatusNotFound)
@@ -143,10 +146,8 @@ func (s *RoomServer) JoinRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	upgrader := websocket.Upgrader{
-		ReadBufferSize:  1024,
-		WriteBufferSize: 1024,
-	}
+	upgrader := websocket.Upgrader{}
+
 	_, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Printf("Couldn't upgrade to websocket: %v", err)
@@ -173,4 +174,9 @@ func checkMethod(w http.ResponseWriter, r *http.Request, method string) bool {
 		return false
 	}
 	return true
+}
+
+func getSecret(r *http.Request) string {
+	h := r.Header.Get("Authorization")
+	return strings.TrimSpace(strings.Replace(h, "Bearer", "", 1))
 }

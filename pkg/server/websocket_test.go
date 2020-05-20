@@ -50,6 +50,11 @@ func TestJoinRoomRequest(t *testing.T) {
 			wantStatus:  401,
 			wantMessage: "Unauthorized\n",
 		},
+		"upgrades to websocket": {
+			room:       myRoomUID,
+			secret:     mySecret,
+			wantStatus: 101,
+		},
 	}
 	for name, tt := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -57,9 +62,7 @@ func TestJoinRoomRequest(t *testing.T) {
 			server := httptest.NewServer(server.NewRoomServer(store))
 			defer server.Close()
 
-			wsURL := "ws://" + server.Listener.Addr().String() + "/rooms/" + tt.room + "/ws"
-
-			ws, response, err := websocket.DefaultDialer.Dial(wsURL, nil)
+			ws, response, err := joinRoom(server, tt.room, tt.secret)
 			if err == nil {
 				defer ws.Close()
 			}
@@ -73,10 +76,21 @@ func TestJoinRoomRequest(t *testing.T) {
 			}
 
 			if err != nil {
-				t.Fatalf("could not open a ws connection on %s: %v", wsURL, err)
+				t.Fatalf("could not open a ws connection: %v", err)
 			}
 		})
 	}
+}
+
+func joinRoom(server *httptest.Server, room string, secret string) (*websocket.Conn, *http.Response, error) {
+	wsURL := "ws://" + server.Listener.Addr().String() + "/rooms/" + room + "/ws"
+
+	var header http.Header
+	if secret != "" {
+		header = http.Header{"Authorization": {"Bearer " + secret}}
+	}
+
+	return websocket.DefaultDialer.Dial(wsURL, header)
 }
 
 func assertResponseStatus(t *testing.T, got *http.Response, want int) {
