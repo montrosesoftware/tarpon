@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/gorilla/websocket"
+	"github.com/montrosesoftware/tarpon/pkg/agent"
 	"github.com/montrosesoftware/tarpon/pkg/messaging"
 	"github.com/montrosesoftware/tarpon/pkg/msv"
 )
@@ -132,31 +133,38 @@ func (s *RoomServer) JoinRoom(w http.ResponseWriter, r *http.Request) {
 	}
 
 	secret := getSecret(r)
+	peer, err := s.store.JoinRoom(room, secret)
 
-	if _, err := s.store.JoinRoom(room, secret); err != nil {
+	if err != nil {
 		switch err {
 		case messaging.ErrRoomNotFound:
 			http.Error(w, "Room not found", http.StatusNotFound)
 		case messaging.ErrUnauthorized:
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		default:
-			log.Printf("Unknown error when joining room: %v", err)
+			log.Printf("unknown error when joining room: %v", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		}
 		return
 	}
 
-	upgrader := websocket.Upgrader{}
-
-	_, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Printf("Couldn't upgrade to websocket: %v", err)
+	upgrader := websocket.Upgrader{
+		ReadBufferSize:  4096,
+		WriteBufferSize: 4096,
 	}
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Printf("couldn't upgrade to websocket: %v", err)
+		return
+	}
+
+	agent := agent.New(peer, room, conn)
+	agent.Start()
 }
 
 func logger(n int, err error) {
 	if err != nil {
-		log.Printf("Response write failed: %v", err)
+		log.Printf("response write failed: %v", err)
 	}
 }
 
