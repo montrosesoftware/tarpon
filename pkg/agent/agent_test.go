@@ -77,22 +77,39 @@ func TestSendMessage(t *testing.T) {
 
 	var messages []messaging.Message
 	for i := 0; i < 100; i++ {
-		messages = append(messages, messaging.Message{
-			From:    myPeer, // this is ignored by the agent, but we also use this array to check received messages
-			To:      "another-peer",
-			Payload: json.RawMessage(`"my message"`),
-		})
+		messages = append(messages, generateMessage(i))
 	}
 
+	writeIncorrectJSON(t, ws)
 	for _, msg := range messages {
 		err = ws.WriteJSON(msg)
 		if err != nil {
 			t.Fatalf("error writing to WS: %v", err)
 		}
 	}
+	writeIncorrectJSON(t, ws)
 
 	// wait until server processes all messages
 	time.Sleep(time.Millisecond * 500)
 
 	broker.assertMessages(t, messages)
+}
+
+func writeIncorrectJSON(t *testing.T, conn *websocket.Conn) {
+	t.Helper()
+	if err := conn.WriteMessage(websocket.BinaryMessage, []byte("{")); err != nil {
+		t.Fatalf("error writing incorrect JSON to WS: %v", err)
+	}
+}
+
+func generateMessage(i int) messaging.Message {
+	var to string
+	if i%2 == 0 {
+		to = "another-peer"
+	}
+	return messaging.Message{
+		From:    myPeer, // this is ignored by the agent, but we also use this array to check received messages
+		To:      to,
+		Payload: json.RawMessage(`"my message"`), // needs to be a valid JSON
+	}
 }
