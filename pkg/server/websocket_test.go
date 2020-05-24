@@ -106,6 +106,7 @@ func TestJoinRoomRequest(t *testing.T) {
 				assertResponseMessage(t, response, tt.wantMessage)
 			}
 
+			// End the test if it isn't expected to open a websocket
 			if tt.wantStatus != 101 {
 				return
 			}
