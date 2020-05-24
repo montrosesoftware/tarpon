@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 
 	"github.com/gorilla/websocket"
@@ -25,6 +26,39 @@ func (s *StubRoomStore) JoinRoom(room string, secret string) (messaging.Peer, er
 	}
 
 	return messaging.Peer{UID: myPeer}, nil
+}
+
+type SpyPeerHandler struct {
+	handled []struct {
+		peer messaging.Peer
+		room string
+	}
+	mutex sync.Mutex
+}
+
+func (s *SpyPeerHandler) handlePeer(p messaging.Peer, room string, conn *websocket.Conn) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	s.handled = append(s.handled, struct {
+		peer messaging.Peer
+		room string
+	}{p, room})
+}
+
+func (s *SpyPeerHandler) assertPeerHandled(t *testing.T, peer messaging.Peer, room string) {
+	t.Helper()
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	if len(s.handled) == 1 {
+		if s.handled[0].peer != peer {
+			t.Errorf("did not handle right peer, got %v, want %v", s.handled[0].peer, peer)
+		}
+		if s.handled[0].room != room {
+			t.Errorf("did not join the right room, got %q, want %q", s.handled[0].room, room)
+		}
+	} else {
+		t.Errorf("didn't handle 1 peer, got %d", len(s.handled))
+	}
 }
 
 func TestJoinRoomRequest(t *testing.T) {
@@ -59,7 +93,8 @@ func TestJoinRoomRequest(t *testing.T) {
 	for name, tt := range cases {
 		t.Run(name, func(t *testing.T) {
 			store := &StubRoomStore{}
-			server := httptest.NewServer(server.NewRoomServer(store))
+			ph := &SpyPeerHandler{}
+			server := httptest.NewServer(server.NewRoomServer(store, ph.handlePeer))
 			defer server.Close()
 
 			ws, response, err := joinRoom(server, tt.room, tt.secret)
@@ -74,6 +109,8 @@ func TestJoinRoomRequest(t *testing.T) {
 			if tt.wantStatus != 101 {
 				return
 			}
+
+			ph.assertPeerHandled(t, messaging.Peer{UID: myPeer}, tt.room)
 
 			if err != nil {
 				t.Fatalf("could not open a ws connection: %v", err)

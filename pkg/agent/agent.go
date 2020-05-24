@@ -9,6 +9,7 @@ import (
 	"github.com/montrosesoftware/tarpon/pkg/messaging"
 )
 
+// Agent handles websocket communication between peers and the broker.
 type Agent struct {
 	peer messaging.Peer
 	room string
@@ -17,6 +18,11 @@ type Agent struct {
 
 func New(p messaging.Peer, r string, c *websocket.Conn) *Agent {
 	return &Agent{peer: p, room: r, conn: c}
+}
+
+func HandlePeer(p messaging.Peer, room string, conn *websocket.Conn) {
+	agent := New(p, room, conn)
+	agent.Start()
 }
 
 func (a *Agent) Start() {

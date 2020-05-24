@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gorilla/websocket"
 	"github.com/montrosesoftware/tarpon/pkg/messaging"
 	"github.com/montrosesoftware/tarpon/pkg/server"
 )
@@ -49,6 +50,8 @@ func (s *SpyRoomStore) RegisterPeer(room string, peer messaging.Peer) bool {
 	return true
 }
 
+func dummyPeerHandler(messaging.Peer, string, *websocket.Conn) {}
+
 func TestCreateRoomRequest(t *testing.T) {
 	cases := map[string]struct {
 		uid         string
@@ -79,7 +82,7 @@ func TestCreateRoomRequest(t *testing.T) {
 	for name, tt := range cases {
 		t.Run(name, func(t *testing.T) {
 			store := &SpyRoomStore{}
-			server := server.NewRoomServer(store)
+			server := server.NewRoomServer(store, dummyPeerHandler)
 
 			request := newCreateRoomRequest(t, tt.uid)
 			response := httptest.NewRecorder()
@@ -142,7 +145,7 @@ func TestRegisterPeerRequest(t *testing.T) {
 	for name, tt := range cases {
 		t.Run(name, func(t *testing.T) {
 			store := &SpyRoomStore{t: t}
-			server := server.NewRoomServer(store)
+			server := server.NewRoomServer(store, dummyPeerHandler)
 
 			request := newRegisterPeerRequest(t, tt.room, tt.peer)
 			response := httptest.NewRecorder()
@@ -176,7 +179,7 @@ func TestInvalidRequests(t *testing.T) {
 	for _, tt := range cases {
 		t.Run("check "+tt.url, func(t *testing.T) {
 			store := &SpyRoomStore{}
-			server := server.NewRoomServer(store)
+			server := server.NewRoomServer(store, dummyPeerHandler)
 			req, err := http.NewRequest(tt.method, tt.url, nil)
 			if err != nil {
 				t.Fatalf("could not instantiate request: %v", err)

@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/gorilla/websocket"
-	"github.com/montrosesoftware/tarpon/pkg/agent"
 	"github.com/montrosesoftware/tarpon/pkg/messaging"
 	"github.com/montrosesoftware/tarpon/pkg/msv"
 )
@@ -19,12 +18,15 @@ type RoomStore interface {
 	JoinRoom(room string, secret string) (messaging.Peer, error)
 }
 
+type PeerHandlerFunc func(p messaging.Peer, room string, conn *websocket.Conn)
+
 type RoomServer struct {
-	store RoomStore
+	store       RoomStore
+	peerHandler PeerHandlerFunc
 }
 
-func NewRoomServer(store RoomStore) *RoomServer {
-	return &RoomServer{store}
+func NewRoomServer(store RoomStore, ph PeerHandlerFunc) *RoomServer {
+	return &RoomServer{store, ph}
 }
 
 func (s *RoomServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -158,8 +160,7 @@ func (s *RoomServer) JoinRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	agent := agent.New(peer, room, conn)
-	agent.Start()
+	s.peerHandler(peer, room, conn)
 }
 
 func logger(n int, err error) {
