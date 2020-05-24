@@ -15,40 +15,65 @@ type Broker interface {
 
 // Agent handles websocket communication between peers and the broker.
 type Agent struct {
-	peer   messaging.Peer
-	room   string
-	conn   *websocket.Conn
-	broker Broker
+	peer      messaging.Peer
+	room      string
+	conn      *websocket.Conn
+	broker    Broker
+	writeChan chan messaging.Message
 }
 
-func New(p messaging.Peer, r string, c *websocket.Conn, b Broker) *Agent {
-	return &Agent{peer: p, room: r, conn: c, broker: b}
+func New(p messaging.Peer, r string, b Broker) *Agent {
+	return &Agent{peer: p, room: r, broker: b, writeChan: make(chan messaging.Message)}
 }
 
 func HandlePeer(p messaging.Peer, room string, conn *websocket.Conn) {
-	agent := New(p, room, conn, nil)
-	agent.Start()
+	agent := New(p, room, nil) // FIXME: broker is nil
+	agent.Start(conn)
 }
 
-func (a *Agent) Start() {
-	go func() {
-		defer func() {
-			a.conn.Close()
-		}()
+func (a *Agent) Write(m messaging.Message) {
+	a.writeChan <- m
+}
 
-		a.conn.SetReadLimit(2048)
+func (a *Agent) Start(c *websocket.Conn) {
+	a.conn = c
+	go a.readPump()
+	go a.writePump()
+}
 
-		for {
-			_, r, err := a.conn.NextReader()
-			if err != nil {
-				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-					log.Printf("error reading from websocket: %v", err)
-				}
-				break
-			}
-			a.handleClientMessage(r)
-		}
+// readPump handles messages coming from the peer
+func (a *Agent) readPump() {
+	defer func() {
+		a.conn.Close()
 	}()
+
+	a.conn.SetReadLimit(2048)
+
+	for {
+		_, r, err := a.conn.NextReader()
+		if err != nil {
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				log.Printf("error reading from websocket: %v", err)
+			}
+			break
+		}
+		a.handleClientMessage(r)
+	}
+}
+
+// writePump handles messages coming from the broker
+func (a *Agent) writePump() {
+	defer func() {
+		a.conn.Close()
+	}()
+
+	for m := range a.writeChan {
+		err := a.conn.WriteJSON(m)
+		if err != nil {
+			log.Printf("error writing to websocket: %v", err)
+			break
+		}
+	}
 }
 
 type ClientMessage struct {
