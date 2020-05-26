@@ -8,6 +8,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/montrosesoftware/tarpon/pkg/broker"
 	"github.com/montrosesoftware/tarpon/pkg/messaging"
+	"github.com/montrosesoftware/tarpon/pkg/server"
 )
 
 // Agent handles websocket communication between peers and the broker.
@@ -23,9 +24,11 @@ func New(p messaging.Peer, r string, b broker.Broker) *Agent {
 	return &Agent{peer: p, room: r, broker: b, writeChan: make(chan messaging.Message)}
 }
 
-func HandlePeer(p messaging.Peer, room string, conn *websocket.Conn) {
-	agent := New(p, room, nil) // FIXME: broker is nil
-	agent.Start(conn)
+func PeerHandler(b broker.Broker) server.PeerHandlerFunc {
+	return func(p messaging.Peer, room string, conn *websocket.Conn) {
+		agent := New(p, room, b)
+		agent.Start(conn)
+	}
 }
 
 func (a *Agent) Write(m messaging.Message) {

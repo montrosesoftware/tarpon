@@ -58,13 +58,15 @@ func (b *SpyBroker) Register(room string, s broker.Subscriber) {
 	}
 }
 
-func (b *SpyBroker) Unregister(room string, s broker.Subscriber) {
+func (b *SpyBroker) Unregister(room string, s broker.Subscriber) bool {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 
 	if room == myRoomUID && b.subscribers[0] == s {
 		b.subscribers = b.subscribers[1:]
+		return true
 	}
+	return false
 }
 
 func (b *SpyBroker) assertMessages(t *testing.T, messages []messaging.Message) {

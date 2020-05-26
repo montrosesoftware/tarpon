@@ -14,7 +14,7 @@ type Subscriber interface {
 type Broker interface {
 	Send(room string, message messaging.Message)
 	Register(room string, s Subscriber)
-	Unregister(room string, s Subscriber)
+	Unregister(room string, s Subscriber) bool
 }
 
 type InMemoryBroker struct {
