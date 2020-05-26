@@ -6,23 +6,20 @@ import (
 	"log"
 
 	"github.com/gorilla/websocket"
+	"github.com/montrosesoftware/tarpon/pkg/broker"
 	"github.com/montrosesoftware/tarpon/pkg/messaging"
 )
-
-type Broker interface {
-	Send(room string, message messaging.Message)
-}
 
 // Agent handles websocket communication between peers and the broker.
 type Agent struct {
 	peer      messaging.Peer
 	room      string
 	conn      *websocket.Conn
-	broker    Broker
+	broker    broker.Broker
 	writeChan chan messaging.Message
 }
 
-func New(p messaging.Peer, r string, b Broker) *Agent {
+func New(p messaging.Peer, r string, b broker.Broker) *Agent {
 	return &Agent{peer: p, room: r, broker: b, writeChan: make(chan messaging.Message)}
 }
 
@@ -41,9 +38,15 @@ func (a *Agent) Start(c *websocket.Conn) {
 	go a.writePump()
 }
 
+func (a *Agent) ID() string {
+	return a.peer.UID
+}
+
 // readPump handles messages coming from the peer
 func (a *Agent) readPump() {
+	a.broker.Register(a.room, a)
 	defer func() {
+		a.broker.Unregister(a.room, a)
 		a.conn.Close()
 	}()
 

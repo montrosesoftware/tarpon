@@ -7,3 +7,7 @@ type Message struct {
 	To      string          `json:"to"`
 	Payload json.RawMessage `json:"payload"`
 }
+
+func (m *Message) IsBroadcast() bool {
+	return m.To == ""
+}

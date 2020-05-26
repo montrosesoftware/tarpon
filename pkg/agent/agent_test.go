@@ -13,6 +13,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/montrosesoftware/tarpon/pkg/agent"
+	"github.com/montrosesoftware/tarpon/pkg/broker"
 	"github.com/montrosesoftware/tarpon/pkg/messaging"
 )
 
@@ -34,8 +35,9 @@ func newMockHandler(agent *agent.Agent) http.HandlerFunc {
 }
 
 type SpyBroker struct {
-	messages []messaging.Message
-	mutex    sync.Mutex
+	messages    []messaging.Message
+	subscribers []broker.Subscriber
+	mutex       sync.Mutex
 }
 
 func (b *SpyBroker) Send(room string, m messaging.Message) {
@@ -44,6 +46,24 @@ func (b *SpyBroker) Send(room string, m messaging.Message) {
 
 	if room == myRoomUID {
 		b.messages = append(b.messages, m)
+	}
+}
+
+func (b *SpyBroker) Register(room string, s broker.Subscriber) {
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+
+	if room == myRoomUID {
+		b.subscribers = append(b.subscribers, s)
+	}
+}
+
+func (b *SpyBroker) Unregister(room string, s broker.Subscriber) {
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+
+	if room == myRoomUID && &b.subscribers[0] == &s {
+		b.subscribers = b.subscribers[1:]
 	}
 }
 
@@ -84,7 +104,8 @@ func TestSendMessageToBroker(t *testing.T) {
 }
 
 func TestWriteMessageToPeer(t *testing.T) {
-	agent := agent.New(messaging.Peer{UID: myPeer}, myRoomUID, nil)
+	broker := &SpyBroker{}
+	agent := agent.New(messaging.Peer{UID: myPeer}, myRoomUID, broker)
 	s := httptest.NewServer(newMockHandler(agent))
 	defer s.Close()
 
