@@ -44,7 +44,7 @@ func (b *InMemoryBroker) Register(room string, s Subscriber) {
 	b.subscribers[room] = append(b.subscribers[room], s)
 }
 
-func (b *InMemoryBroker) Unregister(room string, s Subscriber) {
+func (b *InMemoryBroker) Unregister(room string, s Subscriber) bool {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 
@@ -53,9 +53,10 @@ func (b *InMemoryBroker) Unregister(room string, s Subscriber) {
 		if subscriber == s {
 			roomSubs[i] = roomSubs[len(roomSubs)-1]
 			b.subscribers[room] = roomSubs[:len(roomSubs)-1]
-			break
+			return true
 		}
 	}
+	return false
 }
 
 func (b *InMemoryBroker) broadcast(message messaging.Message, subscribers []Subscriber) {
