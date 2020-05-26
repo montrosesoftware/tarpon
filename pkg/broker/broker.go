@@ -50,7 +50,7 @@ func (b *InMemoryBroker) Unregister(room string, s Subscriber) {
 
 	roomSubs := b.subscribers[room]
 	for i, subscriber := range roomSubs {
-		if &subscriber == &s {
+		if subscriber == s {
 			roomSubs[i] = roomSubs[len(roomSubs)-1]
 			b.subscribers[room] = roomSubs[:len(roomSubs)-1]
 			break

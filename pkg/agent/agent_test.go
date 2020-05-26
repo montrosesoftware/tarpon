@@ -27,7 +27,7 @@ func newMockHandler(agent *agent.Agent) http.HandlerFunc {
 		upgrader := websocket.Upgrader{}
 		c, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
-			log.Printf("error upgradeing connetion to websocket: %v", err)
+			log.Printf("error upgrading connetion to websocket: %v", err)
 			return
 		}
 		agent.Start(c)
@@ -62,7 +62,7 @@ func (b *SpyBroker) Unregister(room string, s broker.Subscriber) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 
-	if room == myRoomUID && &b.subscribers[0] == &s {
+	if room == myRoomUID && b.subscribers[0] == s {
 		b.subscribers = b.subscribers[1:]
 	}
 }
@@ -72,6 +72,44 @@ func (b *SpyBroker) assertMessages(t *testing.T, messages []messaging.Message) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 	assertSameMessages(t, b.messages, messages)
+}
+
+func (b *SpyBroker) assertSubscriber(t *testing.T, id string) {
+	t.Helper()
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+	if len(b.subscribers) != 1 || b.subscribers[0].ID() != id {
+		t.Errorf("got %v subscribers, but wanted one with id %q", b.subscribers, id)
+	}
+}
+
+func (b *SpyBroker) assertNoSubscriber(t *testing.T) {
+	t.Helper()
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+	if len(b.subscribers) != 0 {
+		t.Errorf("got %v subscribers, but wanted none", b.subscribers)
+	}
+}
+
+func TestSubsciptionToBroker(t *testing.T) {
+	broker := &SpyBroker{}
+	agent := agent.New(messaging.Peer{UID: myPeer}, myRoomUID, broker)
+	s := httptest.NewServer(newMockHandler(agent))
+	defer s.Close()
+
+	broker.assertNoSubscriber(t)
+	ws := openWS(t, s)
+	defer ws.Close()
+	// wait for the server to register the agent
+	time.Sleep(time.Millisecond * 100)
+	broker.assertSubscriber(t, myPeer)
+	if err := ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(1000, "closing")); err != nil {
+		t.Errorf("error when closing websocket: %v", err)
+	}
+	// wait until server cleans up
+	time.Sleep(time.Millisecond * 100)
+	broker.assertNoSubscriber(t)
 }
 
 func TestSendMessageToBroker(t *testing.T) {
@@ -98,7 +136,7 @@ func TestSendMessageToBroker(t *testing.T) {
 	writeIncorrectJSON(t, ws)
 
 	// wait until server processes all messages
-	time.Sleep(time.Millisecond * 500)
+	time.Sleep(time.Millisecond * 100)
 
 	broker.assertMessages(t, messages)
 }

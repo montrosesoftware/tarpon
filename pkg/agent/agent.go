@@ -55,7 +55,10 @@ func (a *Agent) readPump() {
 	for {
 		_, r, err := a.conn.NextReader()
 		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+			if websocket.IsUnexpectedCloseError(err,
+				websocket.CloseNormalClosure,
+				websocket.CloseGoingAway,
+				websocket.CloseAbnormalClosure) {
 				log.Printf("error reading from websocket: %v", err)
 			}
 			break
