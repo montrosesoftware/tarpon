@@ -63,10 +63,11 @@ func (s *SpyPeerHandler) assertPeerHandled(t *testing.T, peer messaging.Peer, ro
 
 func TestJoinRoomRequest(t *testing.T) {
 	cases := map[string]struct {
-		room        string
-		secret      string
-		wantStatus  int
-		wantMessage string
+		room           string
+		secret         string
+		useSubprotocol bool
+		wantStatus     int
+		wantMessage    string
 	}{
 		"returns error when invalid room": {
 			room:        "invalid",
@@ -89,6 +90,19 @@ func TestJoinRoomRequest(t *testing.T) {
 			secret:     mySecret,
 			wantStatus: 101,
 		},
+		"upgrades to websocket when secret provided as subprotocol": {
+			room:           myRoomUID,
+			secret:         mySecret,
+			useSubprotocol: true,
+			wantStatus:     101,
+		},
+		"return error when empty secret provided as subprotocol": {
+			room:           myRoomUID,
+			secret:         "",
+			useSubprotocol: true,
+			wantStatus:     401,
+			wantMessage:    "Unauthorized\n",
+		},
 	}
 	for name, tt := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -97,7 +111,7 @@ func TestJoinRoomRequest(t *testing.T) {
 			server := httptest.NewServer(server.NewRoomServer(store, ph.handlePeer))
 			defer server.Close()
 
-			ws, response, err := joinRoom(server, tt.room, tt.secret)
+			ws, response, err := joinRoom(server, tt.room, tt.secret, tt.useSubprotocol)
 			if err == nil {
 				defer ws.Close()
 			}
@@ -120,12 +134,16 @@ func TestJoinRoomRequest(t *testing.T) {
 	}
 }
 
-func joinRoom(server *httptest.Server, room string, secret string) (*websocket.Conn, *http.Response, error) {
+func joinRoom(server *httptest.Server, room string, secret string, useSubprotocol bool) (*websocket.Conn, *http.Response, error) {
 	wsURL := "ws://" + server.Listener.Addr().String() + "/rooms/" + room + "/ws"
 
 	var header http.Header
 	if secret != "" {
-		header = http.Header{"Authorization": {"Bearer " + secret}}
+		if !useSubprotocol {
+			header = http.Header{"Authorization": {"Bearer " + secret}}
+		} else {
+			header = http.Header{"Sec-WebSocket-Protocol": {"access_token," + secret}}
+		}
 	}
 
 	return websocket.DefaultDialer.Dial(wsURL, header)

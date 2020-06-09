@@ -48,7 +48,7 @@ func TestSendingMessagesBetweenPeers(t *testing.T) {
 }
 
 func peerJoinsRoom(t *testing.T, s *httptest.Server, room string, secret string) *websocket.Conn {
-	ws, _, err := joinRoom(s, room, secret)
+	ws, _, err := joinRoom(s, room, secret, false)
 	if err != nil {
 		t.Fatalf("could not open websocket: %v", err)
 	}

@@ -191,5 +191,23 @@ func checkMethod(w http.ResponseWriter, r *http.Request, method string) bool {
 
 func getSecret(r *http.Request) string {
 	h := r.Header.Get("Authorization")
+
+	if h == "" {
+		return getSecretFromSubprotocols(r)
+	}
+
 	return strings.TrimSpace(strings.Replace(h, "Bearer", "", 1))
+}
+
+func getSecretFromSubprotocols(r *http.Request) string {
+	subprotocols := websocket.Subprotocols(r)
+	for i, s := range subprotocols {
+		if s == "access_token" {
+			if i == len(subprotocols)-1 {
+				return ""
+			}
+			return subprotocols[i+1]
+		}
+	}
+	return ""
 }
