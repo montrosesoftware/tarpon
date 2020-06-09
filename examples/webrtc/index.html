@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Tarpon WebRTC example</title>
+  <link rel="stylesheet" href="css/main.css" />
+</head>
+<body>
+  <h1>Tarpon WebRTC example</h1>
+
+  <p>Peer:</p>
+  <div>
+    <input type="radio" name="peerNum" value="0">Peer 1</input>
+    <input type="radio" name="peerNum" value="1">Peer 2</input>
+  </div>
+  <div>
+    <button id="startButton">Start</button>
+    <button id="hangupButton">Hang Up</button>
+  </div>
+
+  <video id="localVideo" autoplay muted playsinline></video>
+  <video id="remoteVideo" autoplay playsinline></video>
+
+  <script>
+    var peers = [
+      {"uid":"p1-74cbdcda-bdc3-4fe3-8602-fbaac01689cc","secret":"4FAAA42E3DEB4C4F0AD20CC9A2A441F400B0A3DD0E57C7FB33EA73D7BFA966BB"},
+      {"uid":"p2-af868c84-ab5a-4835-8503-93f295068f98","secret":"88BDA59097E5840A25C2E7B442E88C7790C508F4C759E82047F9637DA6ACB2C5"},
+      {"uid":"p3-7977c6f9-16d6-4b35-91ec-72f81003914c","secret":"5A3EDF2142FFDE0B2D9803D845C795C24BFDD610D2B9D68408F5207D47E11B4A"},
+    ]
+    var room ="aaa3ff11-9ff3-44b8-ab95-b2f339fb9765"
+  </script>
+
+  <script src="js/adapter.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
