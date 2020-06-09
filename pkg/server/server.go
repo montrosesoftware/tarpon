@@ -153,6 +153,10 @@ func (s *RoomServer) JoinRoom(w http.ResponseWriter, r *http.Request) {
 	upgrader := websocket.Upgrader{
 		ReadBufferSize:  4096,
 		WriteBufferSize: 4096,
+		CheckOrigin: func(r *http.Request) bool {
+			return true
+		},
+		Subprotocols: []string{"tarpon"},
 	}
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
