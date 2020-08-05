@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
 	"log"
@@ -94,6 +95,10 @@ func (a *Agent) handleClientMessage(r io.Reader) {
 	var msgReq ClientMessage
 	if err := json.NewDecoder(r).Decode(&msgReq); err != nil {
 		log.Printf("error decoding message: %v", err)
+		return
+	}
+	if msgReq.Payload == nil || bytes.Equal(msgReq.Payload, []byte("null")) {
+		log.Printf("no payload, dropping message")
 		return
 	}
 	a.broker.Send(a.room, messaging.Message{

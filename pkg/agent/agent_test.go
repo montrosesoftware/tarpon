@@ -128,6 +128,7 @@ func TestSendMessageToBroker(t *testing.T) {
 		messages = append(messages, generateMessage(i))
 	}
 
+	writeMessageWithoutPayload(t, ws)
 	writeIncorrectJSON(t, ws)
 	for _, msg := range messages {
 		err := ws.WriteJSON(msg)
@@ -208,6 +209,13 @@ func writeIncorrectJSON(t *testing.T, conn *websocket.Conn) {
 	t.Helper()
 	if err := conn.WriteMessage(websocket.BinaryMessage, []byte("{")); err != nil {
 		t.Errorf("error writing incorrect JSON to WS: %v", err)
+	}
+}
+
+func writeMessageWithoutPayload(t *testing.T, conn *websocket.Conn) {
+	t.Helper()
+	if err := conn.WriteJSON(messaging.Message{To: "another-peer"}); err != nil {
+		t.Errorf("error writing empty payload message to WS: %v", err)
 	}
 }
 
