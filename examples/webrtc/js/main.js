@@ -54,7 +54,7 @@ function connect() {
 
   connection.onmessage = function(evt) {
     var msg = JSON.parse(evt.data);
-    log("Message received: ");
+    console.log("Message received: ");
     console.dir(msg);
     var time = new Date(msg.date);
     var timeStr = time.toLocaleTimeString();
