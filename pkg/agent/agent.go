@@ -5,11 +5,20 @@ import (
 	"encoding/json"
 	"io"
 	"log"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/montrosesoftware/tarpon/pkg/broker"
 	"github.com/montrosesoftware/tarpon/pkg/messaging"
 	"github.com/montrosesoftware/tarpon/pkg/server"
+)
+
+const (
+	writeWait       = 20 * time.Second
+	pongWait        = 60 * time.Second
+	pingPeriod      = (pongWait * 9) / 10
+	maxMessageSize  = 2048
+	messagesBufSize = 32
 )
 
 // Agent handles websocket communication between peers and the broker.
@@ -22,7 +31,7 @@ type Agent struct {
 }
 
 func New(p messaging.Peer, r string, b broker.Broker) *Agent {
-	return &Agent{peer: p, room: r, broker: b, writeChan: make(chan messaging.Message)}
+	return &Agent{peer: p, room: r, broker: b, writeChan: make(chan messaging.Message, messagesBufSize)}
 }
 
 func PeerHandler(b broker.Broker) server.PeerHandlerFunc {
@@ -54,7 +63,12 @@ func (a *Agent) readPump() {
 		a.conn.Close()
 	}()
 
-	a.conn.SetReadLimit(2048)
+	a.conn.SetReadLimit(maxMessageSize)
+	if err := a.conn.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
+		log.Printf("error setting read deadline on socket: %v", err)
+		return
+	}
+	a.conn.SetPongHandler(func(string) error { return a.conn.SetReadDeadline(time.Now().Add(pongWait)) })
 
 	for {
 		_, r, err := a.conn.NextReader()
@@ -73,15 +87,27 @@ func (a *Agent) readPump() {
 
 // writePump handles messages coming from the broker
 func (a *Agent) writePump() {
+	ticker := time.NewTicker(pingPeriod)
 	defer func() {
+		ticker.Stop()
 		a.conn.Close()
 	}()
 
-	for m := range a.writeChan {
-		err := a.conn.WriteJSON(m)
-		if err != nil {
-			log.Printf("error writing to websocket: %v", err)
-			break
+	for {
+		select {
+		case m := <-a.writeChan:
+			_ = a.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			err := a.conn.WriteJSON(m)
+			if err != nil {
+				log.Printf("error writing to websocket: %v", err)
+				return
+			}
+		case <-ticker.C:
+			_ = a.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := a.conn.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
+				log.Printf("error writing to websocket: %v", err)
+				return
+			}
 		}
 	}
 }

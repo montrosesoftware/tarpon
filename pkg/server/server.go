@@ -126,6 +126,15 @@ func (s *RoomServer) RegisterPeer(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  4096,
+	WriteBufferSize: 4096,
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
+	Subprotocols: []string{"tarpon"},
+}
+
 func (s *RoomServer) JoinRoom(w http.ResponseWriter, r *http.Request) {
 	room, tail := msv.ShiftPathN(r.URL.Path, 2)
 
@@ -150,14 +159,6 @@ func (s *RoomServer) JoinRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	upgrader := websocket.Upgrader{
-		ReadBufferSize:  4096,
-		WriteBufferSize: 4096,
-		CheckOrigin: func(r *http.Request) bool {
-			return true
-		},
-		Subprotocols: []string{"tarpon"},
-	}
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Printf("couldn't upgrade to websocket: %v", err)
