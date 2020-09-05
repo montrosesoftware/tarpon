@@ -45,6 +45,15 @@ func (a *Agent) Write(m messaging.Message) {
 	a.writeChan <- m
 }
 
+func (a *Agent) logIfUnexpected(err error) {
+	if websocket.IsUnexpectedCloseError(err,
+		websocket.CloseNormalClosure,
+		websocket.CloseGoingAway,
+		websocket.CloseAbnormalClosure) {
+		log.Printf("error from websocket: %v", err)
+	}
+}
+
 func (a *Agent) Start(c *websocket.Conn) {
 	a.conn = c
 	go a.readPump()
@@ -73,12 +82,7 @@ func (a *Agent) readPump() {
 	for {
 		_, r, err := a.conn.NextReader()
 		if err != nil {
-			if websocket.IsUnexpectedCloseError(err,
-				websocket.CloseNormalClosure,
-				websocket.CloseGoingAway,
-				websocket.CloseAbnormalClosure) {
-				log.Printf("error reading from websocket: %v", err)
-			}
+			a.logIfUnexpected(err)
 			break
 		}
 		a.handleClientMessage(r)
@@ -99,13 +103,13 @@ func (a *Agent) writePump() {
 			_ = a.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			err := a.conn.WriteJSON(m)
 			if err != nil {
-				log.Printf("error writing to websocket: %v", err)
+				a.logIfUnexpected(err)
 				return
 			}
 		case <-ticker.C:
 			_ = a.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := a.conn.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
-				log.Printf("error writing to websocket: %v", err)
+				a.logIfUnexpected(err)
 				return
 			}
 		}
