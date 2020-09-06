@@ -40,14 +40,14 @@ func (s *RoomServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			return
 		}
+		if head == "ws" {
+			if checkMethod(w, r, http.MethodGet) {
+				s.JoinRoom(w, r)
+			}
+			return
+		}
 		{
 			head, _ := msv.ShiftPath(tail)
-			if head == "ws" {
-				if checkMethod(w, r, http.MethodGet) {
-					s.JoinRoom(w, r)
-				}
-				return
-			}
 			if head == "peers" {
 				if checkMethod(w, r, http.MethodPost) {
 					s.RegisterPeer(w, r)
@@ -136,10 +136,16 @@ var upgrader = websocket.Upgrader{
 }
 
 func (s *RoomServer) JoinRoom(w http.ResponseWriter, r *http.Request) {
-	room, tail := msv.ShiftPathN(r.URL.Path, 2)
+	_, tail := msv.ShiftPathN(r.URL.Path, 1)
 
 	if tail != "/ws" {
 		http.Error(w, "Not Found", http.StatusNotFound)
+		return
+	}
+
+	room := r.URL.Query().Get("room")
+	if room == "" {
+		http.Error(w, "Room not provided", http.StatusBadRequest)
 		return
 	}
 

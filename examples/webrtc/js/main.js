@@ -39,7 +39,7 @@ function sendToServer(msg) {
 }
 
 function connect() {
-  let serverUrl = tarponUrl + "/rooms/" + room + "/ws";
+  let serverUrl = tarponUrl + "/rooms/ws?room=" + room;
 
   trace(`Connecting to server: ${serverUrl}`);
   connection = new WebSocket(serverUrl, ["tarpon", "access_token", peers[peerNum].secret]);

@@ -173,8 +173,8 @@ func TestInvalidRequests(t *testing.T) {
 		{"/rooms/abc/test", "POST", 404},
 		{"/rooms/abc/peers", "GET", 405},
 		{"/rooms/abc/peers/abc", "POST", 404},
-		{"/rooms/abc/ws", "POST", 405},
-		{"/rooms/abc/ws/aaa", "GET", 404},
+		{"/rooms/ws", "POST", 405},
+		{"/rooms/ws/aaa", "GET", 404},
 	}
 	for _, tt := range cases {
 		t.Run("check "+tt.url, func(t *testing.T) {

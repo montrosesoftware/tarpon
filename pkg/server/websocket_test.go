@@ -74,6 +74,11 @@ func TestJoinRoomRequest(t *testing.T) {
 			wantStatus:  404,
 			wantMessage: "Room not found\n",
 		},
+		"returns error when no room provided": {
+			room:        "",
+			wantStatus:  400,
+			wantMessage: "Room not provided\n",
+		},
 		"returns error when no secret": {
 			room:        myRoomUID,
 			wantStatus:  401,
@@ -135,7 +140,7 @@ func TestJoinRoomRequest(t *testing.T) {
 }
 
 func joinRoom(server *httptest.Server, room string, secret string, useSubprotocol bool) (*websocket.Conn, *http.Response, error) {
-	wsURL := "ws://" + server.Listener.Addr().String() + "/rooms/" + room + "/ws"
+	wsURL := "ws://" + server.Listener.Addr().String() + "/rooms/ws?room=" + room
 
 	var header http.Header
 	if secret != "" {
