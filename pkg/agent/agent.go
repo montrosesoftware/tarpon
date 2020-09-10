@@ -17,8 +17,8 @@ const (
 	writeWait       = 20 * time.Second
 	pongWait        = 60 * time.Second
 	pingPeriod      = (pongWait * 9) / 10
-	maxMessageSize  = 2048
-	messagesBufSize = 32
+	maxMessageSize  = 65536
+	messagesBufSize = 16
 )
 
 // Agent handles websocket communication between peers and the broker.
