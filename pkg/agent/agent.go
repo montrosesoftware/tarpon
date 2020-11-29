@@ -9,6 +9,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/montrosesoftware/tarpon/pkg/broker"
+	"github.com/montrosesoftware/tarpon/pkg/logging"
 	"github.com/montrosesoftware/tarpon/pkg/messaging"
 	"github.com/montrosesoftware/tarpon/pkg/server"
 )
@@ -28,15 +29,16 @@ type Agent struct {
 	conn      *websocket.Conn
 	broker    broker.Broker
 	writeChan chan messaging.Message
+	logger    logging.Logger
 }
 
-func New(p messaging.Peer, r string, b broker.Broker) *Agent {
-	return &Agent{peer: p, room: r, broker: b, writeChan: make(chan messaging.Message, messagesBufSize)}
+func New(p messaging.Peer, r string, b broker.Broker, l logging.Logger) *Agent {
+	return &Agent{peer: p, room: r, broker: b, writeChan: make(chan messaging.Message, messagesBufSize), logger: l}
 }
 
-func PeerHandler(b broker.Broker) server.PeerHandlerFunc {
+func PeerHandler(b broker.Broker, l logging.Logger) server.PeerHandlerFunc {
 	return func(p messaging.Peer, room string, conn *websocket.Conn) {
-		agent := New(p, room, b)
+		agent := New(p, room, b, l)
 		agent.Start(conn)
 	}
 }

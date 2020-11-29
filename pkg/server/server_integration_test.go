@@ -11,6 +11,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/montrosesoftware/tarpon/pkg/agent"
 	"github.com/montrosesoftware/tarpon/pkg/broker"
+	"github.com/montrosesoftware/tarpon/pkg/logging"
 	"github.com/montrosesoftware/tarpon/pkg/messaging"
 	"github.com/montrosesoftware/tarpon/pkg/server"
 )
@@ -18,7 +19,7 @@ import (
 func TestSendingMessagesBetweenPeers(t *testing.T) {
 	store := messaging.NewRoomStore()
 	broker := broker.NewBroker()
-	httpServer := httptest.NewServer(server.NewRoomServer(store, agent.PeerHandler(broker)))
+	httpServer := httptest.NewServer(server.NewRoomServer(store, agent.PeerHandler(broker, logging.NoopLogger{})))
 	defer httpServer.Close()
 
 	room := "aaa3ff11-9ff3-44b8-ab95-b2f339fb9765"

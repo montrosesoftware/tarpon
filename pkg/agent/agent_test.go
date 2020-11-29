@@ -14,6 +14,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/montrosesoftware/tarpon/pkg/agent"
 	"github.com/montrosesoftware/tarpon/pkg/broker"
+	"github.com/montrosesoftware/tarpon/pkg/logging"
 	"github.com/montrosesoftware/tarpon/pkg/messaging"
 )
 
@@ -96,7 +97,7 @@ func (b *SpyBroker) assertNoSubscriber(t *testing.T) {
 
 func TestSubsciptionToBroker(t *testing.T) {
 	broker := &SpyBroker{}
-	agent := agent.New(messaging.Peer{UID: myPeer}, myRoomUID, broker)
+	agent := agent.New(messaging.Peer{UID: myPeer}, myRoomUID, broker, logging.NoopLogger{})
 	s := httptest.NewServer(newMockHandler(agent))
 	defer s.Close()
 
@@ -116,7 +117,7 @@ func TestSubsciptionToBroker(t *testing.T) {
 
 func TestSendMessageToBroker(t *testing.T) {
 	broker := &SpyBroker{}
-	agent := agent.New(messaging.Peer{UID: myPeer}, myRoomUID, broker)
+	agent := agent.New(messaging.Peer{UID: myPeer}, myRoomUID, broker, logging.NoopLogger{})
 	s := httptest.NewServer(newMockHandler(agent))
 	defer s.Close()
 
@@ -146,7 +147,7 @@ func TestSendMessageToBroker(t *testing.T) {
 
 func TestWriteMessageToPeer(t *testing.T) {
 	broker := &SpyBroker{}
-	agent := agent.New(messaging.Peer{UID: myPeer}, myRoomUID, broker)
+	agent := agent.New(messaging.Peer{UID: myPeer}, myRoomUID, broker, logging.NoopLogger{})
 	s := httptest.NewServer(newMockHandler(agent))
 	defer s.Close()
 
