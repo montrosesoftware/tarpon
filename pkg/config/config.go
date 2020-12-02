@@ -27,6 +27,8 @@ type Server struct {
 func ParseConfig() Config {
 	var cfg Config
 
+	// Use standard log here because logger is not configured yet
+
 	if _, err := os.Stat(filename); os.IsNotExist(err) {
 		log.Printf("%s not found, reading config from environment", filename)
 		if err := cleanenv.ReadEnv(&cfg); err != nil {

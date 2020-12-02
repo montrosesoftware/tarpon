@@ -3,7 +3,6 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 
@@ -88,7 +87,7 @@ func (s *RoomServer) CreateRoom(w http.ResponseWriter, r *http.Request) {
 	created := s.store.CreateRoom(req.UID)
 	if created {
 		w.WriteHeader(http.StatusCreated)
-		logger(w.Write([]byte("Created\n")))
+		s.withLogging(w.Write([]byte("Created\n")))
 	} else {
 		http.Error(w, "uid: already exists", http.StatusConflict)
 	}
@@ -128,10 +127,10 @@ func (s *RoomServer) RegisterPeer(w http.ResponseWriter, r *http.Request) {
 	p := messaging.Peer(req)
 	if s.store.RegisterPeer(room, p) {
 		w.WriteHeader(http.StatusCreated)
-		logger(w.Write([]byte("Created\n")))
+		s.withLogging((w.Write([]byte("Created\n"))))
 	} else {
 		w.WriteHeader(http.StatusOK)
-		logger(w.Write([]byte("OK\n")))
+		s.withLogging(w.Write([]byte("OK\n")))
 	}
 }
 
@@ -162,7 +161,7 @@ func (s *RoomServer) JoinRoom(w http.ResponseWriter, r *http.Request) {
 		case messaging.ErrUnauthorized:
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		default:
-			log.Printf("unknown error when joining room: %v", err)
+			s.logger.Error("unknown error when joining room", logging.Fields{"room": room, "error": err})
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		}
 		return
@@ -170,16 +169,16 @@ func (s *RoomServer) JoinRoom(w http.ResponseWriter, r *http.Request) {
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Printf("couldn't upgrade to websocket: %v", err)
+		s.logger.Error("cant upgrade to websocket", logging.Fields{"room": room, "peer": peer.UID, "error": err})
 		return
 	}
 
 	s.peerHandler(peer, room, conn)
 }
 
-func logger(n int, err error) {
+func (s *RoomServer) withLogging(n int, err error) {
 	if err != nil {
-		log.Printf("response write failed: %v", err)
+		s.logger.Error("response write failed", logging.Fields{"error": err})
 	}
 }
 

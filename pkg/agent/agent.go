@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"log"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -47,12 +46,14 @@ func (a *Agent) Write(m messaging.Message) {
 	a.writeChan <- m
 }
 
-func (a *Agent) logIfUnexpected(err error) {
+func (a *Agent) logWSError(err error) {
 	if websocket.IsUnexpectedCloseError(err,
 		websocket.CloseNormalClosure,
 		websocket.CloseGoingAway,
 		websocket.CloseAbnormalClosure) {
-		log.Printf("error from websocket: %v", err)
+		a.logger.Error("error from websocket", logging.Fields{"room": a.room, "peer": a.peer.UID, "error": err})
+	} else {
+		a.logger.Info("websocket closed", logging.Fields{"room": a.room, "peer": a.peer.UID, "error": err})
 	}
 }
 
@@ -76,7 +77,7 @@ func (a *Agent) readPump() {
 
 	a.conn.SetReadLimit(maxMessageSize)
 	if err := a.conn.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
-		log.Printf("error setting read deadline on socket: %v", err)
+		a.logger.Error("error setting read deadline on socket", logging.Fields{"room": a.room, "peer": a.peer.UID, "error": err})
 		return
 	}
 	a.conn.SetPongHandler(func(string) error { return a.conn.SetReadDeadline(time.Now().Add(pongWait)) })
@@ -84,7 +85,7 @@ func (a *Agent) readPump() {
 	for {
 		_, r, err := a.conn.NextReader()
 		if err != nil {
-			a.logIfUnexpected(err)
+			a.logWSError(err)
 			break
 		}
 		a.handleClientMessage(r)
@@ -105,13 +106,13 @@ func (a *Agent) writePump() {
 			_ = a.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			err := a.conn.WriteJSON(m)
 			if err != nil {
-				a.logIfUnexpected(err)
+				a.logWSError(err)
 				return
 			}
 		case <-ticker.C:
 			_ = a.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := a.conn.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
-				a.logIfUnexpected(err)
+				a.logWSError(err)
 				return
 			}
 		}
@@ -126,11 +127,11 @@ type ClientMessage struct {
 func (a *Agent) handleClientMessage(r io.Reader) {
 	var msgReq ClientMessage
 	if err := json.NewDecoder(r).Decode(&msgReq); err != nil {
-		log.Printf("error decoding message: %v", err)
+		a.logger.Error("error decoding message:", logging.Fields{"room": a.room, "peer": a.peer.UID, "error": err})
 		return
 	}
 	if msgReq.Payload == nil || bytes.Equal(msgReq.Payload, []byte("null")) {
-		log.Printf("no payload, dropping message")
+		a.logger.Info("no payload, dropping message", logging.Fields{"room": a.room, "peer": a.peer.UID})
 		return
 	}
 	a.broker.Send(a.room, messaging.Message{
