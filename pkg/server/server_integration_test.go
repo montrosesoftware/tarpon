@@ -19,7 +19,7 @@ import (
 func TestSendingMessagesBetweenPeers(t *testing.T) {
 	store := messaging.NewRoomStore()
 	broker := broker.NewBroker()
-	httpServer := httptest.NewServer(server.NewRoomServer(store, agent.PeerHandler(broker, logging.NoopLogger{})))
+	httpServer := httptest.NewServer(server.NewRoomServer(store, agent.PeerHandler(broker, logging.NoopLogger{}), logging.NoopLogger{}))
 	defer httpServer.Close()
 
 	room := "aaa3ff11-9ff3-44b8-ab95-b2f339fb9765"

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/gorilla/websocket"
+	"github.com/montrosesoftware/tarpon/pkg/logging"
 	"github.com/montrosesoftware/tarpon/pkg/messaging"
 	"github.com/montrosesoftware/tarpon/pkg/msv"
 )
@@ -23,10 +24,18 @@ type PeerHandlerFunc func(p messaging.Peer, room string, conn *websocket.Conn)
 type RoomServer struct {
 	store       RoomStore
 	peerHandler PeerHandlerFunc
+	logger      logging.Logger
 }
 
-func NewRoomServer(store RoomStore, ph PeerHandlerFunc) *RoomServer {
-	return &RoomServer{store, ph}
+func NewRoomServer(store RoomStore, ph PeerHandlerFunc, l logging.Logger) *RoomServer {
+	return &RoomServer{store, ph, l}
+}
+
+func (s *RoomServer) Listen(host string, port string) {
+	s.logger.Info("server starts listening...", logging.Fields{"host": host, "port": port})
+	if err := http.ListenAndServe(host+":"+port, s); err != nil {
+		s.logger.Error("can't listen", logging.Fields{"host": host, "port": port, "error": err})
+	}
 }
 
 func (s *RoomServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {

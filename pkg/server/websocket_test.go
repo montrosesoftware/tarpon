@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/gorilla/websocket"
+	"github.com/montrosesoftware/tarpon/pkg/logging"
 	"github.com/montrosesoftware/tarpon/pkg/messaging"
 	"github.com/montrosesoftware/tarpon/pkg/server"
 )
@@ -108,7 +109,7 @@ func TestJoinRoomRequest(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			store := &StubRoomStore{}
 			ph := &SpyPeerHandler{}
-			server := httptest.NewServer(server.NewRoomServer(store, ph.handlePeer))
+			server := httptest.NewServer(server.NewRoomServer(store, ph.handlePeer, logging.NoopLogger{}))
 			defer server.Close()
 
 			ws, response, err := joinRoom(server, tt.room, tt.secret, tt.useSubprotocol)

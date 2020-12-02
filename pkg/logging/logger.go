@@ -1,5 +1,7 @@
 package logging
 
+type Fields map[string]interface{}
+
 type Logger interface {
 	Trace(msg string, fields ...map[string]interface{})
 	Debug(msg string, fields ...map[string]interface{})

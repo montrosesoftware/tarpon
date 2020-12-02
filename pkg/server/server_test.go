@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/gorilla/websocket"
+	"github.com/montrosesoftware/tarpon/pkg/logging"
 	"github.com/montrosesoftware/tarpon/pkg/messaging"
 	"github.com/montrosesoftware/tarpon/pkg/server"
 )
@@ -82,7 +83,7 @@ func TestCreateRoomRequest(t *testing.T) {
 	for name, tt := range cases {
 		t.Run(name, func(t *testing.T) {
 			store := &SpyRoomStore{}
-			server := server.NewRoomServer(store, dummyPeerHandler)
+			server := server.NewRoomServer(store, dummyPeerHandler, logging.NoopLogger{})
 
 			request := newCreateRoomRequest(t, tt.uid)
 			response := httptest.NewRecorder()
@@ -145,7 +146,7 @@ func TestRegisterPeerRequest(t *testing.T) {
 	for name, tt := range cases {
 		t.Run(name, func(t *testing.T) {
 			store := &SpyRoomStore{t: t}
-			server := server.NewRoomServer(store, dummyPeerHandler)
+			server := server.NewRoomServer(store, dummyPeerHandler, logging.NoopLogger{})
 
 			request := newRegisterPeerRequest(t, tt.room, tt.peer)
 			response := httptest.NewRecorder()
@@ -179,7 +180,7 @@ func TestInvalidRequests(t *testing.T) {
 	for _, tt := range cases {
 		t.Run("check "+tt.url, func(t *testing.T) {
 			store := &SpyRoomStore{}
-			server := server.NewRoomServer(store, dummyPeerHandler)
+			server := server.NewRoomServer(store, dummyPeerHandler, logging.NoopLogger{})
 			req, err := http.NewRequest(tt.method, tt.url, nil)
 			if err != nil {
 				t.Fatalf("could not instantiate request: %v", err)
