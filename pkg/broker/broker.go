@@ -3,6 +3,7 @@ package broker
 import (
 	"sync"
 
+	"github.com/montrosesoftware/tarpon/pkg/logging"
 	"github.com/montrosesoftware/tarpon/pkg/messaging"
 )
 
@@ -20,10 +21,11 @@ type Broker interface {
 type InMemoryBroker struct {
 	subscribers map[string][]Subscriber
 	mutex       sync.RWMutex
+	logger      logging.Logger
 }
 
-func NewBroker() *InMemoryBroker {
-	return &InMemoryBroker{subscribers: make(map[string][]Subscriber)}
+func NewBroker(l logging.Logger) *InMemoryBroker {
+	return &InMemoryBroker{subscribers: make(map[string][]Subscriber), logger: l}
 }
 
 func (b *InMemoryBroker) Send(room string, message messaging.Message) {
@@ -42,6 +44,7 @@ func (b *InMemoryBroker) Register(room string, s Subscriber) {
 	defer b.mutex.Unlock()
 
 	b.subscribers[room] = append(b.subscribers[room], s)
+	b.logger.Info("subscriber registered", logging.Fields{"room": room, "subscriber": s.ID()})
 }
 
 func (b *InMemoryBroker) Unregister(room string, s Subscriber) bool {
@@ -53,9 +56,11 @@ func (b *InMemoryBroker) Unregister(room string, s Subscriber) bool {
 		if subscriber == s {
 			roomSubs[i] = roomSubs[len(roomSubs)-1]
 			b.subscribers[room] = roomSubs[:len(roomSubs)-1]
+			b.logger.Info("subscriber unregistered", logging.Fields{"room": room, "subscriber": s.ID()})
 			return true
 		}
 	}
+	b.logger.Warn("tried to unregister subscriber, but it seems not registered", logging.Fields{"room": room, "subscriber": s.ID()})
 	return false
 }
 

@@ -15,9 +15,9 @@ func main() {
 	log.Printf("starting tarpon...")
 
 	config := config.ParseConfig()
-	store := messaging.NewRoomStore()
-	broker := broker.NewBroker()
 	logger := logging.NewLogrusLogger(&config.Logging)
+	store := messaging.NewRoomStore()
+	broker := broker.NewBroker(logger)
 	server := server.NewRoomServer(store, agent.PeerHandler(broker, logger), logger)
 
 	server.Listen(config.Server.Host, config.Server.Port)

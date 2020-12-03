@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/montrosesoftware/tarpon/pkg/broker"
+	"github.com/montrosesoftware/tarpon/pkg/logging"
 	"github.com/montrosesoftware/tarpon/pkg/messaging"
 )
 
@@ -40,7 +41,7 @@ func (s *SpySubscriber) assertMessages(t *testing.T, ms []messaging.Message) {
 }
 
 func TestRegistration(t *testing.T) {
-	broker := broker.NewBroker()
+	broker := broker.NewBroker(logging.NoopLogger{})
 	subscriber := &SpySubscriber{id: peer1}
 
 	broker.Register(room1, subscriber)
@@ -64,7 +65,7 @@ func TestRegistration(t *testing.T) {
 }
 
 func TestSendingMessages(t *testing.T) {
-	broker := broker.NewBroker()
+	broker := broker.NewBroker(logging.NoopLogger{})
 	subscriber1 := &SpySubscriber{id: peer1}
 	subscriber2 := &SpySubscriber{id: peer2}
 	subscriber3 := &SpySubscriber{id: peer3}
@@ -104,7 +105,7 @@ func TestSendingMessages(t *testing.T) {
 }
 
 func TestConcurrentSends(t *testing.T) {
-	broker := broker.NewBroker()
+	broker := broker.NewBroker(logging.NoopLogger{})
 	subscriber1 := &SpySubscriber{id: peer1}
 	subscriber2 := &SpySubscriber{id: peer2}
 

@@ -140,7 +140,7 @@ func (a *Agent) handleClientMessage(r io.Reader) {
 		return
 	}
 	if msgReq.Payload == nil || bytes.Equal(msgReq.Payload, []byte("null")) {
-		a.logger.Info("no payload, dropping message", logging.Fields{"room": a.room, "peer": a.peer.UID})
+		a.logger.Debug("no payload, dropping message", logging.Fields{"room": a.room, "peer": a.peer.UID})
 		return
 	}
 	a.logger.Debug("decoded message from peer", logging.Fields{"room": a.room, "peer": a.peer.UID, "message": msgReq})
