@@ -32,3 +32,7 @@ func NewLogrusLogger(config *config.Logging) *LogurLogger {
 func (l *LogurLogger) WithFields(fields map[string]interface{}) Logger {
 	return &LogurLogger{Logger: logur.WithFields(l.Logger, fields)}
 }
+
+func (l *LogurLogger) IsDebug() bool {
+	return l.Logger.(*logrusadapter.Logger).LevelEnabled(logur.Debug)
+}

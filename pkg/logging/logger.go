@@ -9,6 +9,8 @@ type Logger interface {
 	Warn(msg string, fields ...map[string]interface{})
 	Error(msg string, fields ...map[string]interface{})
 
+	IsDebug() bool
+
 	WithFields(fields map[string]interface{}) Logger
 }
 
@@ -20,5 +22,6 @@ func (NoopLogger) Debug(_ string, _ ...map[string]interface{}) {}
 func (NoopLogger) Info(_ string, _ ...map[string]interface{})  {}
 func (NoopLogger) Warn(_ string, _ ...map[string]interface{})  {}
 func (NoopLogger) Error(_ string, _ ...map[string]interface{}) {}
+func (NoopLogger) IsDebug() bool                               { return false }
 
 func (n NoopLogger) WithFields(_ map[string]interface{}) Logger { return n }

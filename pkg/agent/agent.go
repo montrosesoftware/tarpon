@@ -110,7 +110,7 @@ func (a *Agent) writePump() {
 		select {
 		case m := <-a.writeChan:
 			_ = a.conn.SetWriteDeadline(time.Now().Add(writeWait))
-			a.logger.Debug("sending message to peer", logging.Fields{"room": a.room, "peer": a.peer.UID, "message": m})
+			a.logMessage("sending message to peer", m)
 			err := a.conn.WriteJSON(m)
 			if err != nil {
 				a.logWSError(err)
@@ -143,10 +143,26 @@ func (a *Agent) handleClientMessage(r io.Reader) {
 		a.logger.Debug("no payload, dropping message", logging.Fields{"room": a.room, "peer": a.peer.UID})
 		return
 	}
-	a.logger.Debug("decoded message from peer", logging.Fields{"room": a.room, "peer": a.peer.UID, "message": msgReq})
+	a.logMessage("received message from peer", msgReq)
 	a.broker.Send(a.room, messaging.Message{
 		From:    a.peer.UID,
 		To:      msgReq.To,
 		Payload: msgReq.Payload,
 	})
+}
+
+func (a *Agent) logMessage(t string, o interface{}) {
+	if !a.logger.IsDebug() {
+		return
+	}
+	jsonMessage, err := json.Marshal(o)
+	if err != nil {
+		a.logger.Error("can't marshal object to json", logging.Fields{"room": a.room, "peer": a.peer.UID, "object": o})
+		return
+	}
+	s := string(jsonMessage)
+	if len(s) > 1000 {
+		s = s[:1000] + "..."
+	}
+	a.logger.Debug(t, logging.Fields{"room": a.room, "peer": a.peer.UID, "message": s})
 }
