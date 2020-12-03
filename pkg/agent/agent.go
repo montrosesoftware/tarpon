@@ -61,6 +61,7 @@ func (a *Agent) Start(c *websocket.Conn) {
 	a.conn = c
 	go a.readPump()
 	go a.writePump()
+	a.logger.Info("agent started", logging.Fields{"room": a.room, "peer": a.peer.UID})
 }
 
 func (a *Agent) ID() string {
@@ -73,6 +74,7 @@ func (a *Agent) readPump() {
 	defer func() {
 		a.broker.Unregister(a.room, a)
 		a.conn.Close()
+		a.logger.Info("agent stopped", logging.Fields{"room": a.room, "peer": a.peer.UID})
 	}()
 
 	a.conn.SetReadLimit(maxMessageSize)
@@ -80,7 +82,10 @@ func (a *Agent) readPump() {
 		a.logger.Error("error setting read deadline on socket", logging.Fields{"room": a.room, "peer": a.peer.UID, "error": err})
 		return
 	}
-	a.conn.SetPongHandler(func(string) error { return a.conn.SetReadDeadline(time.Now().Add(pongWait)) })
+	a.conn.SetPongHandler(func(string) error {
+		a.logger.Debug("received pong from peer", logging.Fields{"room": a.room, "peer": a.peer.UID})
+		return a.conn.SetReadDeadline(time.Now().Add(pongWait))
+	})
 
 	for {
 		_, r, err := a.conn.NextReader()
@@ -88,6 +93,7 @@ func (a *Agent) readPump() {
 			a.logWSError(err)
 			break
 		}
+		a.logger.Debug("received data from peer", logging.Fields{"room": a.room, "peer": a.peer.UID})
 		a.handleClientMessage(r)
 	}
 }
@@ -104,6 +110,7 @@ func (a *Agent) writePump() {
 		select {
 		case m := <-a.writeChan:
 			_ = a.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			a.logger.Debug("sending message to peer", logging.Fields{"room": a.room, "peer": a.peer.UID, "message": m})
 			err := a.conn.WriteJSON(m)
 			if err != nil {
 				a.logWSError(err)
@@ -111,6 +118,7 @@ func (a *Agent) writePump() {
 			}
 		case <-ticker.C:
 			_ = a.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			a.logger.Debug("sending ping to peer", logging.Fields{"room": a.room, "peer": a.peer.UID})
 			if err := a.conn.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
 				a.logWSError(err)
 				return
@@ -126,6 +134,7 @@ type ClientMessage struct {
 
 func (a *Agent) handleClientMessage(r io.Reader) {
 	var msgReq ClientMessage
+
 	if err := json.NewDecoder(r).Decode(&msgReq); err != nil {
 		a.logger.Error("error decoding message:", logging.Fields{"room": a.room, "peer": a.peer.UID, "error": err})
 		return
@@ -134,6 +143,7 @@ func (a *Agent) handleClientMessage(r io.Reader) {
 		a.logger.Info("no payload, dropping message", logging.Fields{"room": a.room, "peer": a.peer.UID})
 		return
 	}
+	a.logger.Debug("decoded message from peer", logging.Fields{"room": a.room, "peer": a.peer.UID, "message": msgReq})
 	a.broker.Send(a.room, messaging.Message{
 		From:    a.peer.UID,
 		To:      msgReq.To,
