@@ -68,6 +68,11 @@ func (a *Agent) ID() string {
 	return a.peer.UID
 }
 
+type DisconnectPayload struct {
+	Type    string          `json:"type"`
+	Peer    string          `json:"peer"`
+}
+
 // readPump handles messages coming from the peer
 func (a *Agent) readPump() {
 	a.broker.Register(a.room, a)
@@ -85,6 +90,23 @@ func (a *Agent) readPump() {
 	a.conn.SetPongHandler(func(string) error {
 		a.logger.Debug("received pong from peer", logging.Fields{"room": a.room, "peer": a.peer.UID})
 		return a.conn.SetReadDeadline(time.Now().Add(pongWait))
+	})
+
+	a.conn.SetCloseHandler(func(err int, msg string) error {
+		a.logger.Debug("peer disconnected", logging.Fields{"room": a.room, "peer": a.peer.UID, "error_code": err, "error_msg": msg})
+		
+		jsonMessage, jsonError := json.Marshal(DisconnectPayload{"peer_disconnected", a.peer.UID})
+		if jsonError != nil {
+			a.logger.Error("can't marshal object to json")
+			return nil
+		}			
+
+		a.broker.Send(a.room, messaging.Message{
+			From:    "tarpon",
+			To:      "",
+			Payload: jsonMessage,
+		})
+		return nil
 	})
 
 	for {
