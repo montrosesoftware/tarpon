@@ -78,6 +78,7 @@ func (a *Agent) readPump() {
 	a.broker.Register(a.room, a)
 	defer func() {
 		a.broker.Unregister(a.room, a)
+		a.broker.AnnounceDisconnection(a.room, a)
 		a.conn.Close()
 		a.logger.Info("agent stopped", logging.Fields{"room": a.room, "peer": a.peer.UID})
 	}()

@@ -16,6 +16,7 @@ type Broker interface {
 	Send(room string, message messaging.Message)
 	Register(room string, s Subscriber)
 	Unregister(room string, s Subscriber) bool
+	AnnounceDisconnection(room string, s Subscriber)
 }
 
 type InMemoryBroker struct {
@@ -37,6 +38,14 @@ func (b *InMemoryBroker) Send(room string, message messaging.Message) {
 	} else {
 		b.sendDirect(message, b.subscribers[room])
 	}
+}
+
+func (b *InMemoryBroker) AnnounceDisconnection(room string, s Subscriber) {
+	b.Send(room, messaging.Message{
+		From:    s.ID(),
+		To:      "",
+		Payload: []byte(`{"type": "peer_disconnected"}`),
+	})
 }
 
 func (b *InMemoryBroker) Register(room string, s Subscriber) {
