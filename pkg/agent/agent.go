@@ -71,9 +71,13 @@ func (a *Agent) ID() string {
 // readPump handles messages coming from the peer
 func (a *Agent) readPump() {
 	a.broker.Register(a.room, a)
+	a.broker.SendControl(a.room, messaging.NewPeerConnected(a.ID()))
+
 	defer func() {
+		close(a.writeChan)
+
 		a.broker.Unregister(a.room, a)
-		a.broker.AnnounceDisconnection(a.room, a)
+		a.broker.SendControl(a.room, messaging.NewPeerDisconnected(a.ID()))
 		a.conn.Close()
 		a.logger.Info("agent stopped", logging.Fields{"room": a.room, "peer": a.peer.UID})
 	}()
@@ -109,7 +113,11 @@ func (a *Agent) writePump() {
 
 	for {
 		select {
-		case m := <-a.writeChan:
+		case m, more := <-a.writeChan:
+			if !more {
+				return
+			}
+
 			_ = a.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			a.logMessage("sending message to peer", m)
 			err := a.conn.WriteJSON(m)

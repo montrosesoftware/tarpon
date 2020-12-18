@@ -1,6 +1,7 @@
 package broker
 
 import (
+	"encoding/json"
 	"sync"
 
 	"github.com/montrosesoftware/tarpon/pkg/logging"
@@ -14,9 +15,9 @@ type Subscriber interface {
 
 type Broker interface {
 	Send(room string, message messaging.Message)
+	SendControl(room string, payload interface{})
 	Register(room string, s Subscriber)
 	Unregister(room string, s Subscriber) bool
-	AnnounceDisconnection(room string, s Subscriber)
 }
 
 type InMemoryBroker struct {
@@ -40,12 +41,23 @@ func (b *InMemoryBroker) Send(room string, message messaging.Message) {
 	}
 }
 
-func (b *InMemoryBroker) AnnounceDisconnection(room string, s Subscriber) {
-	b.Send(room, messaging.Message{
-		From:    s.ID(),
-		To:      "",
-		Payload: []byte(`{"type": "peer_disconnected"}`),
-	})
+func (b *InMemoryBroker) SendControl(room string, payload interface{}) {
+	b.mutex.RLock()
+	defer b.mutex.RUnlock()
+
+	payloadJson, err := json.Marshal(payload)
+	if err != nil {
+		b.logger.Error("failed to marshal control payload", logging.Fields{"room": room})
+	}
+
+	b.broadcast(
+		messaging.Message{
+			From:    "tarpon",
+			To:      "",
+			Payload: payloadJson,
+		},
+		b.subscribers[room],
+	)
 }
 
 func (b *InMemoryBroker) Register(room string, s Subscriber) {
