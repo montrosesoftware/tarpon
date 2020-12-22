@@ -35,7 +35,7 @@ func NewPeerDisconnected(logger logging.Logger, peerUID string) Message {
 
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
-		logger.Error("failed to marshal control payload", logging.Fields{"type": "peer_disconnected", "peer": peerUID})
+		logger.Error("failed to marshal control payload", logging.Fields{"type": ctrlDisconnected, "peer": peerUID})
 	}
 
 	return Message{
@@ -53,7 +53,7 @@ func NewPeerConnected(logger logging.Logger, peerUID string) Message {
 
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
-		logger.Error("failed to marshal control payload", logging.Fields{"type": "peer_connected", "peer": peerUID})
+		logger.Error("failed to marshal control payload", logging.Fields{"type": ctrlConnected, "peer": peerUID})
 	}
 
 	return Message{
