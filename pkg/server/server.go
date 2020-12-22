@@ -196,7 +196,7 @@ func checkLength(w http.ResponseWriter, val string, lower int, upper int, name s
 
 func checkUID(w http.ResponseWriter, val string) bool {
 	if val == "tarpon" {
-		http.Error(w, "Your UID cannot be 'tarpon' you filthy hacker.", http.StatusBadRequest)
+		http.Error(w, fmt.Sprint("Your UID cannot be '", messaging.ServerUID, "' you filthy hacker."), http.StatusBadRequest)
 		return false
 	}
 	return true

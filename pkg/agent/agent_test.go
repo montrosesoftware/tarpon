@@ -124,6 +124,9 @@ func TestSendMessageToBroker(t *testing.T) {
 	ws := openWS(t, s)
 	defer ws.Close()
 
+	var ctrlMessages []messaging.Message
+	ctrlMessages = append(ctrlMessages, messaging.NewPeerConnected(logging.NoopLogger{}, myPeer))
+
 	var messages []messaging.Message
 	for i := 0; i < 100; i++ {
 		messages = append(messages, generateMessage(i))
@@ -142,7 +145,7 @@ func TestSendMessageToBroker(t *testing.T) {
 	// wait until server processes all messages
 	time.Sleep(time.Millisecond * 100)
 
-	broker.assertMessages(t, messages)
+	broker.assertMessages(t, append(ctrlMessages, messages...))
 }
 
 func TestWriteMessageToPeer(t *testing.T) {

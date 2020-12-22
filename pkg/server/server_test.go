@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	tarponUID     = "tarpon"
+	tarponUID     = messaging.ServerUID
 	tooLongUID    = "0123456789-0123456789-0123456789-0123456789"
 	tooLongSecret = strings.Repeat("a", 101)
 	myRoomUID     = "room-123"
