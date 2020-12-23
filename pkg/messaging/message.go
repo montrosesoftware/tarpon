@@ -2,8 +2,6 @@ package messaging
 
 import (
 	"encoding/json"
-
-	"github.com/montrosesoftware/tarpon/pkg/logging"
 )
 
 const (
@@ -27,7 +25,7 @@ type controlPayload struct {
 	Peer string `json:"peer"`
 }
 
-func NewPeerDisconnected(logger logging.Logger, peerUID string) Message {
+func NewPeerDisconnected(peerUID string) (*Message, error) {
 	payload := controlPayload{
 		Type: ctrlDisconnected,
 		Peer: peerUID,
@@ -35,17 +33,17 @@ func NewPeerDisconnected(logger logging.Logger, peerUID string) Message {
 
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
-		logger.Error("failed to marshal control payload", logging.Fields{"type": ctrlDisconnected, "peer": peerUID})
+		return nil, err
 	}
 
-	return Message{
+	return &Message{
 		From:    ServerUID,
 		To:      "",
 		Payload: jsonPayload,
-	}
+	}, nil
 }
 
-func NewPeerConnected(logger logging.Logger, peerUID string) Message {
+func NewPeerConnected(peerUID string) (*Message, error) {
 	payload := controlPayload{
 		Type: ctrlConnected,
 		Peer: peerUID,
@@ -53,12 +51,12 @@ func NewPeerConnected(logger logging.Logger, peerUID string) Message {
 
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
-		logger.Error("failed to marshal control payload", logging.Fields{"type": ctrlConnected, "peer": peerUID})
+		return nil, err
 	}
 
-	return Message{
+	return &Message{
 		From:    ServerUID,
 		To:      "",
 		Payload: jsonPayload,
-	}
+	}, nil
 }

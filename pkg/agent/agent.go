@@ -68,14 +68,23 @@ func (a *Agent) ID() string {
 	return a.peer.UID
 }
 
+func (a *Agent) sendControlMessage(msgFactory func(a string) (*messaging.Message, error)) {
+	msg, err := msgFactory(a.ID())
+	if err != nil {
+		a.logger.Error("failed to create control message", logging.Fields{"room": a.room, "peer": a.peer.UID, "error": err})
+	} else {
+		a.broker.Send(a.room, *msg)
+	}
+}
+
 // readPump handles messages coming from the peer
 func (a *Agent) readPump() {
-	a.broker.Send(a.room, messaging.NewPeerConnected(a.logger, a.ID()))
+	a.sendControlMessage(messaging.NewPeerConnected)
 	a.broker.Register(a.room, a)
 
 	defer func() {
 		a.broker.Unregister(a.room, a)
-		a.broker.Send(a.room, messaging.NewPeerDisconnected(a.logger, a.ID()))
+		a.sendControlMessage(messaging.NewPeerDisconnected)
 
 		close(a.writeChan)
 		a.conn.Close()
