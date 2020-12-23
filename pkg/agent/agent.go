@@ -88,7 +88,6 @@ func (a *Agent) readPump() {
 		a.sendControlMessage(messaging.NewPeerDisconnected)
 
 		close(a.stopChan)
-		a.conn.Close()
 		a.logger.Info("agent stopped", logging.Fields{"room": a.room, "peer": a.peer.UID})
 	}()
 
