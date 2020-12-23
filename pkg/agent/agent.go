@@ -28,11 +28,12 @@ type Agent struct {
 	conn      *websocket.Conn
 	broker    broker.Broker
 	writeChan chan messaging.Message
+	stopChan  chan struct{}
 	logger    logging.Logger
 }
 
 func New(p messaging.Peer, r string, b broker.Broker, l logging.Logger) *Agent {
-	return &Agent{peer: p, room: r, broker: b, writeChan: make(chan messaging.Message, messagesBufSize), logger: l}
+	return &Agent{peer: p, room: r, broker: b, writeChan: make(chan messaging.Message, messagesBufSize), stopChan: make(chan struct{}), logger: l}
 }
 
 func PeerHandler(b broker.Broker, l logging.Logger) server.PeerHandlerFunc {
@@ -86,7 +87,7 @@ func (a *Agent) readPump() {
 		a.broker.Unregister(a.room, a)
 		a.sendControlMessage(messaging.NewPeerDisconnected)
 
-		close(a.writeChan)
+		close(a.stopChan)
 		a.conn.Close()
 		a.logger.Info("agent stopped", logging.Fields{"room": a.room, "peer": a.peer.UID})
 	}()
@@ -141,6 +142,8 @@ func (a *Agent) writePump() {
 				a.logWSError(err)
 				return
 			}
+		case <-a.stopChan:
+			return
 		}
 	}
 }
