@@ -37,6 +37,8 @@ func TestSendingMessagesBetweenPeers(t *testing.T) {
 	ws2 := peerJoinsRoom(t, httpServer, room, peerSecret2)
 	defer ws2.Close()
 
+	_ = readMessage(t, ws1) // skip 'peer_connected'
+
 	m1 := agent.ClientMessage{To: peer2, Payload: json.RawMessage(`"ping"`)}
 	sendMessage(t, ws1, m1)
 	recv1 := readMessage(t, ws2)
@@ -99,6 +101,6 @@ func assertSameMessages(t *testing.T, from string, sent agent.ClientMessage, rec
 		t.Errorf("received message sent to %q, but wanted to %s", recv.To, sent.To)
 	}
 	if !reflect.DeepEqual(sent.Payload, recv.Payload) {
-		t.Errorf("received message body is %v, but wanted to %v", recv.Payload, sent.Payload)
+		t.Errorf("received message body is %v, but wanted %v", recv.Payload, sent.Payload)
 	}
 }

@@ -16,6 +16,7 @@ import (
 )
 
 var (
+	tarponUID     = messaging.ServerUID
 	tooLongUID    = "0123456789-0123456789-0123456789-0123456789"
 	tooLongSecret = strings.Repeat("a", 101)
 	myRoomUID     = "room-123"
@@ -121,6 +122,12 @@ func TestRegisterPeerRequest(t *testing.T) {
 		},
 		"returns error when peer UID too long": {
 			peer:       &messaging.Peer{UID: tooLongUID, Secret: mySecret},
+			room:       myRoomUID,
+			wantStatus: 400,
+			wantPeer:   false,
+		},
+		"returns error when peer UID is spoofed as server name": {
+			peer:       &messaging.Peer{UID: tarponUID, Secret: mySecret},
 			room:       myRoomUID,
 			wantStatus: 400,
 			wantPeer:   false,

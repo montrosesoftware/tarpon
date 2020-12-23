@@ -28,11 +28,12 @@ type Agent struct {
 	conn      *websocket.Conn
 	broker    broker.Broker
 	writeChan chan messaging.Message
+	stopChan  chan struct{}
 	logger    logging.Logger
 }
 
 func New(p messaging.Peer, r string, b broker.Broker, l logging.Logger) *Agent {
-	return &Agent{peer: p, room: r, broker: b, writeChan: make(chan messaging.Message, messagesBufSize), logger: l}
+	return &Agent{peer: p, room: r, broker: b, writeChan: make(chan messaging.Message, messagesBufSize), stopChan: make(chan struct{}), logger: l}
 }
 
 func PeerHandler(b broker.Broker, l logging.Logger) server.PeerHandlerFunc {
@@ -68,11 +69,25 @@ func (a *Agent) ID() string {
 	return a.peer.UID
 }
 
+func (a *Agent) sendControlMessage(msgFactory func(a string) (*messaging.Message, error)) {
+	msg, err := msgFactory(a.ID())
+	if err != nil {
+		a.logger.Error("failed to create control message", logging.Fields{"room": a.room, "peer": a.peer.UID, "error": err})
+	} else {
+		a.broker.Send(a.room, *msg)
+	}
+}
+
 // readPump handles messages coming from the peer
 func (a *Agent) readPump() {
+	a.sendControlMessage(messaging.NewPeerConnected)
 	a.broker.Register(a.room, a)
+
 	defer func() {
 		a.broker.Unregister(a.room, a)
+		a.sendControlMessage(messaging.NewPeerDisconnected)
+
+		close(a.stopChan)
 		a.conn.Close()
 		a.logger.Info("agent stopped", logging.Fields{"room": a.room, "peer": a.peer.UID})
 	}()
@@ -108,7 +123,11 @@ func (a *Agent) writePump() {
 
 	for {
 		select {
-		case m := <-a.writeChan:
+		case m, more := <-a.writeChan:
+			if !more {
+				return
+			}
+
 			_ = a.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			a.logMessage("sending message to peer", m)
 			err := a.conn.WriteJSON(m)
@@ -123,6 +142,8 @@ func (a *Agent) writePump() {
 				a.logWSError(err)
 				return
 			}
+		case <-a.stopChan:
+			return
 		}
 	}
 }

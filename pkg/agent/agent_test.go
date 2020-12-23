@@ -124,6 +124,13 @@ func TestSendMessageToBroker(t *testing.T) {
 	ws := openWS(t, s)
 	defer ws.Close()
 
+	var ctrlMessages []messaging.Message
+	msg, err := messaging.NewPeerConnected(myPeer)
+	if err != nil {
+		t.Fatalf("error creating control message: %v", err)
+	}
+	ctrlMessages = append(ctrlMessages, *msg)
+
 	var messages []messaging.Message
 	for i := 0; i < 100; i++ {
 		messages = append(messages, generateMessage(i))
@@ -140,6 +147,35 @@ func TestSendMessageToBroker(t *testing.T) {
 	writeIncorrectJSON(t, ws)
 
 	// wait until server processes all messages
+	time.Sleep(time.Millisecond * 100)
+
+	broker.assertMessages(t, append(ctrlMessages, messages...))
+}
+
+func TestWriteControlMessages(t *testing.T) {
+	broker := &SpyBroker{}
+	agent := agent.New(messaging.Peer{UID: myPeer}, myRoomUID, broker, logging.NoopLogger{})
+	s := httptest.NewServer(newMockHandler(agent))
+	defer s.Close()
+
+	ws := openWS(t, s)
+	ws.Close()
+
+	var messages []messaging.Message
+
+	msg1, err1 := messaging.NewPeerConnected(myPeer)
+	if err1 != nil {
+		t.Fatalf("error creating control message: %v", err1)
+	}
+	messages = append(messages, *msg1)
+
+	msg2, err2 := messaging.NewPeerDisconnected(myPeer)
+	if err2 != nil {
+		t.Fatalf("error creating control message: %v", err2)
+	}
+	messages = append(messages, *msg2)
+
+	// wait for a server to process peers connection
 	time.Sleep(time.Millisecond * 100)
 
 	broker.assertMessages(t, messages)

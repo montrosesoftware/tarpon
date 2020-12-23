@@ -120,6 +120,10 @@ func (s *RoomServer) RegisterPeer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !checkUID(w, req.UID) {
+		return
+	}
+
 	if !checkLength(w, req.Secret, 24, 100, "secret") {
 		return
 	}
@@ -185,6 +189,14 @@ func (s *RoomServer) withLogging(n int, err error) {
 func checkLength(w http.ResponseWriter, val string, lower int, upper int, name string) bool {
 	if len(val) < lower || len(val) > upper {
 		http.Error(w, fmt.Sprint(name, ": must be between ", lower, " and ", upper, " characters"), http.StatusBadRequest)
+		return false
+	}
+	return true
+}
+
+func checkUID(w http.ResponseWriter, val string) bool {
+	if val == "tarpon" {
+		http.Error(w, fmt.Sprint("Your UID cannot be '", messaging.ServerUID, "' you filthy hacker."), http.StatusBadRequest)
 		return false
 	}
 	return true
