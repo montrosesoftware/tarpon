@@ -21,13 +21,19 @@ type RoomStore interface {
 type PeerHandlerFunc func(p messaging.Peer, room string, conn *websocket.Conn)
 
 type RoomServer struct {
-	store       RoomStore
-	peerHandler PeerHandlerFunc
-	logger      logging.Logger
+	store          RoomStore
+	peerHandler    PeerHandlerFunc
+	logger         logging.Logger
+	metricsHandler http.Handler
 }
 
 func NewRoomServer(store RoomStore, ph PeerHandlerFunc, l logging.Logger) *RoomServer {
-	return &RoomServer{store, ph, l}
+	return &RoomServer{store, ph, l, nil}
+}
+
+func (s *RoomServer) EnableMetrics(handler http.Handler) {
+	s.logger.Info("metrics endpoint enabled")
+	s.metricsHandler = handler
 }
 
 func (s *RoomServer) Listen(host string, port string) {
@@ -39,6 +45,11 @@ func (s *RoomServer) Listen(host string, port string) {
 
 func (s *RoomServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	head, tail := msv.ShiftPath(r.URL.Path)
+
+	if head == "metrics" && s.metricsHandler != nil {
+		s.metricsHandler.ServeHTTP(w, r)
+		return
+	}
 
 	if head == "rooms" {
 		head, tail := msv.ShiftPath(tail)
