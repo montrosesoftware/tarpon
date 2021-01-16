@@ -44,7 +44,9 @@ func PeerHandler(b broker.Broker, l logging.Logger) server.PeerHandlerFunc {
 }
 
 func (a *Agent) Write(m messaging.Message) {
+	a.logMessage("adding message to the write channel...", m)
 	a.writeChan <- m
+	a.logMessage("added message to the write channel", m)
 }
 
 func (a *Agent) logWSError(err error) {
@@ -88,7 +90,7 @@ func (a *Agent) readPump() {
 		a.sendControlMessage(messaging.NewPeerDisconnected)
 
 		close(a.stopChan)
-		a.logger.Info("agent stopped", logging.Fields{"room": a.room, "peer": a.peer.UID})
+		a.logger.Debug("agent read pump stopped", logging.Fields{"room": a.room, "peer": a.peer.UID})
 	}()
 
 	a.conn.SetReadLimit(maxMessageSize)
@@ -117,17 +119,24 @@ func (a *Agent) writePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
-		a.conn.Close()
+		a.logger.Debug("closing websocket", logging.Fields{"room": a.room, "peer": a.peer.UID})
+		if err := a.conn.Close(); err != nil {
+			a.logger.Warn("error while closing websocket", logging.Fields{"room": a.room, "peer": a.peer.UID, "error": err})
+		}
+		a.logger.Debug("agent write pump stopped", logging.Fields{"room": a.room, "peer": a.peer.UID})
 	}()
 
 	for {
 		select {
 		case m, more := <-a.writeChan:
 			if !more {
+				a.logger.Error("agent write channel closed which shouldn't happen", logging.Fields{"room": a.room, "peer": a.peer.UID})
 				return
 			}
 
-			_ = a.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := a.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+				a.logger.Error("error setting write deadline for message", logging.Fields{"room": a.room, "peer": a.peer.UID})
+			}
 			a.logMessage("sending message to peer", m)
 			err := a.conn.WriteJSON(m)
 			if err != nil {
@@ -135,13 +144,16 @@ func (a *Agent) writePump() {
 				return
 			}
 		case <-ticker.C:
-			_ = a.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := a.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+				a.logger.Error("error setting write deadline for ping", logging.Fields{"room": a.room, "peer": a.peer.UID})
+			}
 			a.logger.Debug("sending ping to peer", logging.Fields{"room": a.room, "peer": a.peer.UID})
 			if err := a.conn.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
 				a.logWSError(err)
 				return
 			}
 		case <-a.stopChan:
+			a.logger.Debug("agent write pump received stop signal", logging.Fields{"room": a.room, "peer": a.peer.UID})
 			return
 		}
 	}
