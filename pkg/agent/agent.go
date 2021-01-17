@@ -47,9 +47,9 @@ func (a *Agent) Write(m messaging.Message) {
 	a.logMessage("adding message to the write channel...", m)
 	select {
 	case a.writeChan <- m:
-		a.logger.Debug("added message to the write channel", logging.Fields{"room": a.room, "peer": a.peer.UID})
+		a.logger.Debug("added message to the write channel", logging.Fields{"room": a.room, "peer": a.peer.UID, "buffer_length": len(a.writeChan)})
 	default:
-		a.logger.Warn("message dropped, agent write channel buffer is full", logging.Fields{"room": a.room, "peer": a.peer.UID})
+		a.logger.Warn("message dropped, agent write channel buffer is full", logging.Fields{"room": a.room, "peer": a.peer.UID, "buffer_length": len(a.writeChan)})
 	}
 }
 

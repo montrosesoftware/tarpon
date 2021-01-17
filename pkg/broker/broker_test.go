@@ -44,8 +44,18 @@ func TestRegistration(t *testing.T) {
 	broker := broker.NewBroker(logging.NoopLogger{})
 	subscriber := &SpySubscriber{id: peer1}
 
+	c := broker.RoomsCount()
+	if c != 0 {
+		t.Errorf("got %d rooms, but want 0", c)
+	}
+
 	broker.Register(room1, subscriber)
 	broker.Register(room1, subscriber)
+
+	c = broker.RoomsCount()
+	if c != 1 {
+		t.Errorf("got %d rooms, but want 1", c)
+	}
 
 	if !broker.Unregister(room1, subscriber) {
 		t.Errorf("subscriber %q not unregistered during 1st attempt", subscriber)
@@ -55,12 +65,22 @@ func TestRegistration(t *testing.T) {
 		t.Errorf("subscriber %q not unregistered during 2nd attempt", subscriber)
 	}
 
+	c = broker.RoomsCount()
+	if c != 0 {
+		t.Errorf("got %d rooms, but want 0", c)
+	}
+
 	if broker.Unregister(room1, subscriber) {
 		t.Errorf("subscriber %q unregistered, but it shouldn't", subscriber)
 	}
 
 	if broker.Unregister("invalid room", subscriber) {
 		t.Errorf("subscriber %q unregistered, but room doesn't exist", subscriber)
+	}
+
+	c = broker.RoomsCount()
+	if c != 0 {
+		t.Errorf("got %d rooms, but want 0", c)
 	}
 }
 
