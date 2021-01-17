@@ -152,6 +152,17 @@ func TestSendMessageToBroker(t *testing.T) {
 	broker.assertMessages(t, append(ctrlMessages, messages...))
 }
 
+// this test times out when writing to agent blocks
+func TestWriteMessageToPeerNeverBlocks(t *testing.T) {
+	broker := &SpyBroker{}
+	// this agent doesn't start, so is not processing messages sent to the peer, causing the buffer to get full
+	agent := agent.New(messaging.Peer{UID: myPeer}, myRoomUID, broker, logging.NoopLogger{})
+
+	for i := 0; i < 1000; i++ {
+		agent.Write(generateMessage(i))
+	}
+}
+
 func TestWriteControlMessages(t *testing.T) {
 	broker := &SpyBroker{}
 	agent := agent.New(messaging.Peer{UID: myPeer}, myRoomUID, broker, logging.NoopLogger{})
@@ -191,7 +202,7 @@ func TestWriteMessageToPeer(t *testing.T) {
 	defer ws.Close()
 
 	var messages []messaging.Message
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 64; i++ {
 		messages = append(messages, generateMessage(i))
 	}
 
@@ -200,7 +211,7 @@ func TestWriteMessageToPeer(t *testing.T) {
 	}
 
 	var receivedMessages []messaging.Message
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 64; i++ {
 		_ = ws.SetReadDeadline(time.Now().Add(time.Second * 1))
 		var msg messaging.Message
 		err := ws.ReadJSON(&msg)

@@ -14,11 +14,11 @@ import (
 )
 
 const (
-	writeWait       = 20 * time.Second
+	writeWait       = 15 * time.Second
 	pongWait        = 60 * time.Second
 	pingPeriod      = (pongWait * 9) / 10
-	maxMessageSize  = 65536
-	messagesBufSize = 16
+	maxMessageSize  = 32768
+	messagesBufSize = 64
 )
 
 // Agent handles websocket communication between peers and the broker.
@@ -45,8 +45,12 @@ func PeerHandler(b broker.Broker, l logging.Logger) server.PeerHandlerFunc {
 
 func (a *Agent) Write(m messaging.Message) {
 	a.logMessage("adding message to the write channel...", m)
-	a.writeChan <- m
-	a.logMessage("added message to the write channel", m)
+	select {
+	case a.writeChan <- m:
+		a.logger.Debug("added message to the write channel", logging.Fields{"room": a.room, "peer": a.peer.UID})
+	default:
+		a.logger.Warn("message dropped, agent write channel buffer is full", logging.Fields{"room": a.room, "peer": a.peer.UID})
+	}
 }
 
 func (a *Agent) logWSError(err error) {
